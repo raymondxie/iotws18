@@ -1,0 +1,21 @@
+{
+  "name": "iotcs-grovepi-nodejs",
+  "version": "1.0.0",
+  "description": "Clients for connecting to Oracle IoT CS based on various devices and channels",
+  "main": "wio-iotcs-client.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/raymondxie/iotws18.git"
+  },
+  "keywords": [
+    "oracle",
+    "iot",
+    "grovepi"
+  ],
+  "author": "Oracle",
+  "license": "MIT",
+  "dependencies": {
+    "mqtt": "^1.14.1",
+    "node-grovepi": "2.*"
+  }
+}
