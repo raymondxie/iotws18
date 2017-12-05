@@ -1,0 +1,87 @@
+{
+  "_args": [
+    [
+      {
+        "raw": "node-wio-link",
+        "scope": null,
+        "escapedName": "node-wio-link",
+        "name": "node-wio-link",
+        "rawSpec": "",
+        "spec": "latest",
+        "type": "tag"
+      },
+      "/Users/yuhxie/gitlab/iotws18"
+    ]
+  ],
+  "_from": "node-wio-link@latest",
+  "_id": "node-wio-link@0.0.2",
+  "_inCache": true,
+  "_location": "/node-wio-link",
+  "_nodeVersion": "8.9.1",
+  "_npmOperationalInternal": {
+    "host": "s3://npm-registry-packages",
+    "tmp": "tmp/node-wio-link-0.0.2.tgz_1511912951897_0.6652880841866136"
+  },
+  "_npmUser": {
+    "name": "tejashah88",
+    "email": "tejashah88@gmail.com"
+  },
+  "_npmVersion": "5.5.1",
+  "_phantomChildren": {},
+  "_requested": {
+    "raw": "node-wio-link",
+    "scope": null,
+    "escapedName": "node-wio-link",
+    "name": "node-wio-link",
+    "rawSpec": "",
+    "spec": "latest",
+    "type": "tag"
+  },
+  "_requiredBy": [
+    "#USER",
+    "/"
+  ],
+  "_resolved": "https://registry.npmjs.org/node-wio-link/-/node-wio-link-0.0.2.tgz",
+  "_shasum": "939a5eb6ba9ae82e8ca35e9db08d524be820ec42",
+  "_shrinkwrap": null,
+  "_spec": "node-wio-link",
+  "_where": "/Users/yuhxie/gitlab/iotws18",
+  "author": {
+    "name": "tejashah88"
+  },
+  "bugs": {
+    "url": "https://github.com/tejashah88/node-wio-link/issues"
+  },
+  "dependencies": {
+    "axios": "^0.17.1"
+  },
+  "description": "A node.js client library for using the Wio Link API.",
+  "devDependencies": {},
+  "directories": {},
+  "dist": {
+    "integrity": "sha512-4TyJ1kTKmkbsKrRfz0ah/+IxuTMxnoi/AsL2Xvm9GbtiCqg9sX8YgjNhZC8SL2rzedF6JXLQbh7KS91LkwT3ZA==",
+    "shasum": "939a5eb6ba9ae82e8ca35e9db08d524be820ec42",
+    "tarball": "https://registry.npmjs.org/node-wio-link/-/node-wio-link-0.0.2.tgz"
+  },
+  "gitHead": "cb0a6d6e13f541c68e340fe3ea6764927ee235b0",
+  "homepage": "https://github.com/tejashah88/node-wio-link#readme",
+  "license": "MIT",
+  "main": "index.js",
+  "maintainers": [
+    {
+      "name": "tejashah88",
+      "email": "tejashah88@gmail.com"
+    }
+  ],
+  "name": "node-wio-link",
+  "optionalDependencies": {},
+  "readme": "ERROR: No README data found!",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tejashah88/node-wio-link.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "version": "0.0.2"
+}
