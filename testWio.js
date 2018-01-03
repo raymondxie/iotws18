@@ -1,20 +1,37 @@
+var WioNode = require("./wio.js");
+var wioConfig = require("./sensor-config.js").wio_iot;
 
-var serverLocation = 'us'
-var nodeToken = 'e922a7f9cba75778c840aed07c9ff306'
+var callback = function(data, error) {
+    if( data != null )
+        console.log("data->", data);
+    if( error != null)
+        console.log("error->", error);
+}
 
-var nodePort = 'GroveLedWs2812D0'
-//var nodePort = 'GroveGyroITG3200I2C0'
-// var nodePort = 'GroveAirqualityA0'
-var wioClient = require('node-wio-link')(serverLocation)
-// var url = 'https://us.wio.seeed.io/v1/node/GroveGyroITG3200I2C0/temperature'
-// var url = 'https://us.wio.seeed.io/v1/node/GroveLedWs2812D0/clear/28/00FF00'
-// var pma = 'temperature'
-var pma = 'clear'
+// construct a Wio board
+var board = new WioNode({
+    "debug": true,
+    "token": wioConfig.token,
+    "location": wioConfig.location
+});
 
-wioClient.node.write(nodeToken, nodePort, pma, "15", "00FFFF")
-  .then(function(data) {
-          console.log(data)
-                })
-  .catch(function(error) {
-          console.log(error)
-                });
+
+// write once
+board.write(callback, 'GroveSpeakerD0', 'sound_ms', '443', '1000');
+// read once
+board.read(callback, 'GroveTempHumD1', 'temperature');
+// continuous reading
+board.stream('GroveTempHumD1', 'temperature', 1000, callback);
+// stop continuous reading
+setTimeout(function(){
+    board.stopStream('GroveTempHumD1', 'temperature');
+}, 20000);
+
+
+/*
+var wio = require("./wio3.js");
+wio.write(callback, 'GroveSpeakerD2', 'sound_ms', '443', '1000');
+var reading = wio.read(callback, 'GroveTempHumD1', 'temperature');
+wio.stream('GroveTempHumD1', 'temperature', 1000, callback);
+*/
+

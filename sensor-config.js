@@ -6,7 +6,8 @@
 //
 // An sample config file looks like below, please take only the sensors that you are using,
 // also make sure the attribute name (attr) and initial value (val) are properly set for your case.
-// If you have other type of sensor, you can add an entry in this config file, and in mainClient.js
+// If you have other type of sensor, you can add an entry in this config file, and extend corresponding
+// *-lient.js code
 //
 /*
 var config = [
@@ -45,7 +46,9 @@ var config = [
 ];
 */
 
-var config = [
+var exports = module.exports = {};
+
+exports.grovepi = [
   {
     "pin": "A2",
     "type": "RotaryAngleAnalogSensor",
@@ -65,4 +68,36 @@ var config = [
     "val": false
   }
 ];
-module.exports = config;
+
+exports.wio_node = [
+  {
+    "pin": "A2",
+    "type": "RotaryAngleAnalogSensor",
+    "attr": "angle",
+    "val": 0
+  },
+  {
+    "pin": "A1",
+    "type": "LightAnalogSensor",
+    "attr": "light",
+    "val": 0
+  },
+  {
+    "pin": "D3",
+    "type": "Button",
+    "attr": "button",
+    "val": false
+  }
+];
+
+exports.wio_iot = {
+  "location": "us",
+  "token": "678daf8d876b57be49cceee69d69308a"
+};
+
+/*
+// exports.wio_iot = {
+//   "location": "us",
+//   "token": "e922a7f9cba75778c840aed07c9ff306"
+// };
+*/

@@ -34,7 +34,7 @@ const Digital = GrovePi.sensors.base.Digital;
 const Analog = GrovePi.sensors.base.Analog;
 
 // Load GrovePI Sensor Config
-const sensorConfig = require('./sensor-config.js');
+const sensorConfig = require('./sensor-config.js').grovepi;
 console.log('sensorConfig = ', sensorConfig);
 
 // Current Sensor Values - collected from "sensor-config.js" file and populated at run-time

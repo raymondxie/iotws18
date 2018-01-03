@@ -17,6 +17,6 @@
   "dependencies": {
     "mqtt": "^1.14.1",
     "node-grovepi": "2.*",
-    "node-wio-link": "0.0.2"
+    "npmlog": "^4.1.2"
   }
 }
