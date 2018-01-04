@@ -43,7 +43,7 @@ function WioNode(opts) {
 
 WioNode.prototype.debug = function(msg) {
     if (this.debugMode)
-        log.info('WinNode: ', msg)
+        log.warn('WinNode: ', msg)
 }
 
 /* 

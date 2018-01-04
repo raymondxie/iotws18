@@ -7,44 +7,8 @@
 // An sample config file looks like below, please take only the sensors that you are using,
 // also make sure the attribute name (attr) and initial value (val) are properly set for your case.
 // If you have other type of sensor, you can add an entry in this config file, and extend corresponding
-// *-lient.js code
+// client.js code
 //
-/*
-var config = [
-  {
-    "pin": "A0",
-    "type": "SoundAnalogSensor"
-  },
-  {
-    "pin": "A1",
-    "type": "RotaryAngleAnalogSensor"
-  },
-  {
-    "pin": "A2",
-    "type": "LightAnalogSensor"
-  },
-  {
-    "pin": "D4",
-    "type": "LEDSocketKit"
-  },
-  {
-    "pin": "D5",
-    "type": "TemperatureAndHumiditySensor"
-  },
-  {
-    "pin": "D7",
-    "type": "Button"
-  },
-  {
-    "pin": "D8",
-    "type": "Buzzer"
-  },
-  {
-    "pin": "D6",
-    "type": "UltrasonicRanger"
-  }
-];
-*/
 
 var exports = module.exports = {};
 
@@ -69,24 +33,63 @@ exports.grovepi = [
   }
 ];
 
+
+// For Wio Node and sensors
+// {
+//   "pin": "A2",               -- which connector 
+//   "type": "IN",              -- type: INPUT or OUTPUT
+//   "property": "humidity",    -- type of reading
+//   "attr": "humidity",        -- device model attribute
+//   "val": 0                   -- default value for a model attribute
+// }
 exports.wio_node = [
   {
-    "pin": "A2",
-    "type": "RotaryAngleAnalogSensor",
-    "attr": "angle",
+    // Humidity sensor
+    "type": "INPUT",
+    "pin": "GroveTempHumD1",
+    "property": "humidity",
+    "attr": "humidity",
     "val": 0
   },
   {
-    "pin": "A1",
-    "type": "LightAnalogSensor",
+    // Temperature sensor
+    "type": "INPUT",
+    "pin": "GroveTempHumD1",
+    "property": "termperature",
+    "attr": "temperature",
+    "val": 0
+  },
+  {
+    // Light Sensor
+    "type": "INPUT",
+    "pin": "GroveLuminanceA0",
+    "property": "light",
     "attr": "light",
     "val": 0
   },
   {
-    "pin": "D3",
-    "type": "Button",
-    "attr": "button",
-    "val": false
+    // LED light
+    "type": "OUTPUT",  
+    "pin": "GenericDOutD1",
+    "property": "onoff",
+    "attr": "ledonoff",
+    "val": "0"
+  },
+  {
+    // LED Bar
+    "type": "OUTPUT",  
+    "pin": "GroveLEDBarUART0",
+    "property": "toggle",
+    "attr": "lightlevel",
+    "val": "0"
+  },
+  {
+    // Buzzer
+    "type": "OUTPUT",  
+    "pin": "GroveSpeakerD0",
+    "property": "sound_start",
+    "attr": "soundfreq",
+    "val": "0"
   }
 ];
 

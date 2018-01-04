@@ -5,14 +5,6 @@
 // 3. Sync data/control signal with IoTCS
 //
 
-function wioRead() {
-
-}
-
-function wioWrite() {
-
-}
-
 
 /**
  * This NodeJS client acts as the main loop for Wio Node or Wio Link board with Grove sensors.
@@ -21,7 +13,6 @@ function wioWrite() {
  * and push to IoTCS.
  *
  * This client is a directly connected device using IoTCS csl virtual device API.
- *
  *
  * 12/26/2017  yuhua.xie@oracle.com
  */
@@ -41,23 +32,20 @@ iotClient.oracle.iot.tam.store = (process.argv[2]);
 iotClient.oracle.iot.tam.storePassword = (process.argv[3]);
 
 // Wio Node board 
-const wioNode = require("./wio.js");
-
-// GrovePi board and sensors
-// const GrovePi = require('node-grovepi').GrovePi;
-// const Board = GrovePi.board;
-// const UltrasonicDigitalSensor = GrovePi.sensors.UltrasonicDigital;
-// const DHTDigitalSensor = GrovePi.sensors.DHTDigital;
-// const LightAnalogSensor = GrovePi.sensors.LightAnalog;
-// const Digital = GrovePi.sensors.base.Digital;
-// const Analog = GrovePi.sensors.base.Analog;
+const WioNode = require("./wio.js");
+const wioConfig = require("./sensor-config.js").wio_iot;
 
 // Load Wio Node / Wio Link Sensor Config
 const sensorConfig = require('./sensor-config.js').wio_node;
 console.log('sensorConfig = ', sensorConfig);
 
+const log = require('npmlog');
+
+
 // Current Sensor Values - collected from "sensor-config.js" file and populated at run-time
 var currentData = {};
+currentData['operator'] = "YOUR_NAME";  // replace with your own name, so we can see whose sensor data coming in.
+
 /*
 For example, after population of sensors:
 var currentData = {
@@ -76,7 +64,7 @@ var currentData = {
 
 const device = new iotClient.device.DirectlyConnectedDevice();
 
-// Virtual Device;
+// Virtual Device toward IoTCS side
 var virtualDev;
 
 //
@@ -84,19 +72,19 @@ var virtualDev;
 // Setup device and board and initialize them
 activateDeviceIfNeeded(device)
     .then((device) => {
-        console.log( 'device: ', device);
+        log.info( 'device: ', device);
         return getModelWioNodeDeviceModel(device);
     })
     .then((deviceModel) => {
-        console.log( 'device model: ', deviceModel);
+        log.info( 'device model: ', deviceModel);
         virtualDev = device.createVirtualDevice(device.getEndpointId(), deviceModel);
-        return createGrovePiBoard(virtualDev);
+        return createWioBoard(virtualDev);
     })
     .then((board) => {
         return setupSensors();
     })
     .catch(err => {
-        console.log('err = ', err);
+        log.error('err = ', err);
     });
 
 /**
@@ -104,26 +92,21 @@ activateDeviceIfNeeded(device)
  *
  * @returns {Promise} that completes when the board has been initialized
  */
-function createGrovePiBoard() {
+function createWioBoard() {
     return new Promise((resolve, reject) => {
-        var board = new Board({
-            debug: true,
-            onError: function (err) {
-                reject('Something went wrong with grove pi init. Err:'+err);
-            },
-            onInit: function (res) {
-                if (res) {
-                    resolve(board);
-                } else {
-                    reject('Init failed')
-                }
-            }
+        // construct a Wio board
+        var board = new WioNode({
+            "debug": true,
+            "token": wioConfig.token,
+            "location": wioConfig.location
         });
-        board.init();
+
+        resolve(board);
     });
 }
 
 function setupSensors() {
+    // for handling control signal from IoTCS
     let writableSensors = {};
 
     virtualDev.onChange = tupples => {
@@ -134,113 +117,58 @@ function setupSensors() {
                 oldValue: tupple.oldValue,
                 newValue: tupple.newValue
             };
-            console.log('------------------ON VIRTUAL DEVICE CHANGE ---------------------');
-            console.log(JSON.stringify(show, null, 4));
-            console.log('----------------------------------------------------------------');
-            if (writableSensors[tupple.attribute.id]) writableSensors[tupple.attribute.id].write(tupple.newValue);
+            log.debug('------------------ON VIRTUAL DEVICE CHANGE ---------------------');
+            log.debug(JSON.stringify(show, null, 4));
+            log.debug('----------------------------------------------------------------');
+
+            if (writableSensors[tupple.attribute.id]) {
+                // writableSensors[tupple.attribute.id].write(tupple.newValue);
+                var sensor = writableSensors[tupple.attribute.id];
+
+                board.write((data, error)=>{
+                    if (data) log.info(data);
+                    if (error) log.warn(error);
+                }, 
+                sensor.pin, 
+                sensor.property, 
+                tupple.newValue);
+            }
         });
     };
 
+    // process sensor-config.js file, and start sensor reading and prepare for control commands
     sensorConfig.forEach(sensor => {
-        var pinMatch = sensor.pin.match(/([AD])(\d+)/);
-        var isAnalog = pinMatch[1] === 'A';
-        var pin = parseInt(pinMatch[2]);
-
         // initialize sensor data
         if( sensor.attr !== null ) {
             currentData[sensor.attr] = sensor.val;
         }
 
         switch (sensor.type) {
-            case 'TemperatureAndHumiditySensor':
-                let tempHumSensor = new DHTDigitalSensor(pin,DHTDigitalSensor.VERSION.DHT11,DHTDigitalSensor.CELSIUS);
-                tempHumSensor.stream(200, function(res) {
-                    if (res) {
-                        let change = false;
-                        if (res[0] !== currentData['temperature']) {
-                            currentData['temperature'] = res[0];
-                            change = true;
-                        }
-                        if (res[1] !== currentData['humidity']) {
-                            currentData['humidity'] = res[1];
-                            change = true;
-                        }
-                        if (res[2] !== currentData['heatIndex']) {
-                            currentData['heatIndex'] = res[2];
-                            change = true;
-                        }
-                        if (change) dataChange();
+            case 'INPUT':
+                board.stream(sensor.pin, sensor.property, 1000, (data, error) => {
+                    if (error) {
+                        log.error("can not read " + sensor.property);
                     }
-                    // console.log('TemperatureAndHumiditySensor temp = ', temp,'hum = ', hum,'heatIndex = ', heatIndex);
-                });
-                break;
-
-            case 'LightAnalogSensor':
-                new LightAnalogSensor(pin).stream(2000, function(res) {
-                    if (res !== currentData[sensor.attr] && res !== false) {
-                        if (Math.abs(res- currentData[sensor.attr]) > 2 ) {
-                            currentData[sensor.attr] = res;
-                            dataChange();
-                        }
+                    if (data && Math.abs(data - currentData[sensor.attr]) > 1) {
+                        currentData[sensor.attr] = data;
+                        // push to IoTCS
+                        virtualDev.update(currentData);
                     }
                 });
                 break;
 
-            case 'Button':
-                new Digital(pin).stream(100, function(res) {
-                    if (res !== currentData[sensor.attr] && res !== false) {
-                        currentData[sensor.attr] = res !== 0;
-                        dataChange();
-                    }
-                });
-                break;
-
-            case 'UltrasonicRanger':
-                new UltrasonicDigitalSensor(pin).stream(100, function(res) {
-                    if (res !== currentData['range'] && res !== false) {
-                        currentData['range'] = res;
-                        dataChange();
-                    }
-                });
-                break;
-
-            case 'SoundAnalogSensor':
-                new Analog(pin).stream(100, function(res) {
-                    if (res !== currentData['sound'] && res !== false) {
-                        currentData['sound'] = res;
-                        dataChange();
-                    }
-                });
-                break;
-
-            case 'RotaryAngleAnalogSensor':
-                new Analog(pin).stream(1000, function(res) {
-                    if (res !== currentData[sensor.attr] && res !== false) {
-                      // RXIE: filter out little noise
-                      if (Math.abs(res- currentData[sensor.attr]) > 5 ) {
-                            currentData[sensor.attr] = res;
-                        dataChange();
-                      }
-                    }
-                });
-                break;
-
-            case 'LEDSocketKit':
-                writableSensors['led'] = new Digital(pin);
-                break;
-
-            case 'Buzzer':
-                writableSensors['buzzer'] = new Digital(pin);
+            case 'OUTPUT':
+                writableSensors[sensor.attr] = sensor;
                 break;
         }
     });
 }
 
 
-function dataChange() {
-    console.log('updateChange() - currentData = ', currentData);
-    virtualDev.update(currentData);
-}
+// function dataChange() {
+//     console.log('updateChange() - currentData = ', currentData);
+//     virtualDev.update(currentData);
+// }
 
 
 function getModelWioNodeDeviceModel(device){
@@ -257,7 +185,7 @@ function activateDeviceIfNeeded(device) {
             resolve(device);
         } else {
             device.activate([DEVICE_MODEL_URN], () => {
-                console.log('Activated device ',device.getEndpointId(),device.isActivated());
+                log.info('Activated device ',device.getEndpointId(),device.isActivated());
                 if (device.isActivated()) {
                     resolve(device);
                 } else {
