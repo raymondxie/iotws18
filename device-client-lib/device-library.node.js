@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and 
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -87,7 +87,7 @@ function init(lib) {
 // file: library/device/@overview.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates.  All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates.  All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and 
  * the Universal Permissive License (UPL).  See the LICENSE file in the root
@@ -132,7 +132,7 @@ function init(lib) {
  * // 2. Activate the device
  *
  *      if (!gateway.isActivated()) {
- *          gateway.activate(['urn:oracle:iot:device:default'], function (device, error) {
+ *          gateway.activate([], function (device, error) {
  *              if (!device || error) {
  *                  //handle activation error
  *              }
@@ -227,6 +227,74 @@ function init(lib) {
  *
  *      ec.close();
  *
+ * @example <caption>Storage Cloud Quick Start</caption>
+ *
+ * // This shows how to use the messaging API to upload content to,
+ * // or download content from, the Oracle Storage Cloud Service.
+ * // To upload or download content, there must be an attribute, field,
+ * // or action in the device model with type URI.
+ * // When creating a DataItem for an attribute, field, or action of type URI,
+ * // the value is set to the URI of the content in cloud storage.
+ *
+ * //
+ * // Uploading/downloading content without Storage Dispatcher
+ * //
+ *
+ *     var storageObjectUpload = gateway.createStorageObject("uploadFileName", "image/jpg");
+ *     storageObjectUpload.setInputStream(fs.createReadStream("upload.jpg"));
+ *     storageObjectUpload.sync(uploadCallback);
+ *
+ *
+ *     var messageDispatcher = new iotcs.device.util.MessageDispatcher(gateway);
+ *     messageDispatcher.getRequestDispatcher().registerRequestHandler(id,
+ *         'deviceModels/urn:com:oracle:iot:device:motion_activated_camera/attributes/image',
+ *         function (requestMessage) {
+ *             //handle URI attribute validation, get URI from request message
+ *             gateway.createStorageObject(URI, function(storageObjectDownload, error) {
+ *                  if (error) {
+ *                      // error handling
+ *                  }
+ *                  // only download if image is less than 4M
+ *                  if (storageObjectDownload.getLength() <  4 * 1024 * 1024) {
+ *                      storageObjectDownload.setOutputStream(fs.createWriteStream("download.jpg"));
+ *                      // downloadCallback have to send response massage
+ *                      // using messageDispatcher.queue method
+ *                      storageObjectDownload.sync(downloadCallback);
+ *                  }
+ *             });
+ *             return iotcs.message.Message.buildResponseWaitMessage();
+ *         });
+ *
+ * //
+ * // Uploading/downloading content with Storage Dispatcher
+ * //
+ *
+ *     var storageDispatcher = new iotcs.device.util.StorageDispatcher(gateway);
+ *     storageDispatcher.onProgress = function (progress, error) {
+ *          if (error) {
+ *              // error handling
+ *          }
+ *          var storageObject = progress.getStorageObject();
+ *          if (progress.getState() === iotcs.StorageDispatcher.Progress.State.COMPLETED) {
+ *              // image was uploaded
+ *              // Send message with the storage object name
+ *              var message = new iotcs.message.Message();
+ *              message
+ *                   .type(iotcs.message.Message.Type.DATA)
+ *                   .source(id)
+ *                   .format('CONTENT_MODEL_URN' + ":attributes");
+ *              message.dataItem('CONTENT_ATTRIBUTE', storageObject.getURI());
+ *
+ *          } else if (progress.getState() === iotcs.StorageDispatcher.Progress.State.IN_PROGRESS) {
+ *              // if taking too long time, cancel
+ *              storageDispatcher.cancel(storageObject);
+ *          }
+ *     };
+ *
+ *     var storageObjectUpload = gateway.createStorageObject("uploadFileName", "image/jpg");
+ *     storageObjectUpload.setInputStream(fs.createReadStream("upload.jpg"));
+ *     storageDispatcher.queue(storageObjectUpload);
+ *
  */
 
 
@@ -234,7 +302,7 @@ function init(lib) {
 // file: library/device/@globals.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -276,25 +344,132 @@ lib.oracle.iot.client.monitor.pollingInterval = lib.oracle.iot.client.monitor.po
 /** @ignore */
 lib.oracle.iot.client.device = lib.oracle.iot.client.device || {};
 
-/** @ignore */
+/**
+ * If this is set long polling feature is disabled and global
+ * monitor is used for receiving messages by the device client
+ * library.
+ *
+ * @name iotcs․oracle․iot․client․device․disableLongPolling
+ * @global
+ * @type {boolean}
+ * @default false
+ */
 lib.oracle.iot.client.device.disableLongPolling = lib.oracle.iot.client.device.disableLongPolling || false;
 
-/** @ignore */
+/**
+ * Offset time (in milliseconds) added by the framework when
+ * using the device client receive method with timeout parameter
+ * set.
+ *
+ * @name iotcs․oracle․iot․client․device․longPollingTimeoutOffset
+ * @global
+ * @type {number}
+ * @default 100
+ */
 lib.oracle.iot.client.device.longPollingTimeoutOffset = lib.oracle.iot.client.device.longPollingTimeoutOffset || 100;
 
-/** @ignore */
+/**
+ * If this is set the device client library is allowed to
+ * use draft device models when retrieving the models and
+ * when activating clients. If this is not set and getDeviceModel
+ * method returns a draft devices models an error will be thrown.
+ *
+ * @name iotcs․oracle․iot․client․device․allowDraftDeviceModels
+ * @global
+ * @type {boolean}
+ * @default false
+ */
 lib.oracle.iot.client.device.allowDraftDeviceModels = lib.oracle.iot.client.device.allowDraftDeviceModels || false;
 
-/** @ignore */
+/**
+ * The size of the buffer (in bytes) used to store received
+ * messages by each device client.
+ *
+ * @name iotcs․oracle․iot․client․device․requestBufferSize
+ * @global
+ * @type {number}
+ * @default 4192
+ */
 lib.oracle.iot.client.device.requestBufferSize = lib.oracle.iot.client.device.requestBufferSize || 4192;
 
-/** @ignore */
+/**
+ * The MessageDispatcher queue size (in number of messages),
+ * for store and forward functionality.
+ *
+ * @name iotcs․oracle․iot․client․device․maximumMessagesToQueue
+ * @global
+ * @type {number}
+ * @default 1000
+ */
 lib.oracle.iot.client.device.maximumMessagesToQueue = lib.oracle.iot.client.device.maximumMessagesToQueue || 1000;
 
-/** @ignore */
+/**
+ * The StorageDispatcher queue size (in number of storage objects),
+ * for store and forward functionality.
+ *
+ * @name iotcs․oracle․iot․client․maximumStorageObjectsToQueue
+ * @global
+ * @type {number}
+ * @default 50
+ */
+lib.oracle.iot.client.maximumStorageObjectsToQueue = lib.oracle.iot.client.maximumStorageObjectsToQueue || 50;
+
+/**
+ * The Storage Cloud server token validity period in minutes
+ *
+ * @name iotcs․oracle․iot․client․storageTokenPeriod
+ * @global
+ * @type {number}
+ * @default 30
+ */
+lib.oracle.iot.client.storageTokenPeriod = lib.oracle.iot.client.storageTokenPeriod || 30;
+
+/**
+ * The Storage Cloud server hostname
+ *
+ * @name iotcs․oracle․iot․client․storageCloudHost
+ * @global
+ * @type {String}
+ * @default "storage.oraclecloud.com"
+ */
+lib.oracle.iot.client.storageCloudHost = lib.oracle.iot.client.storageCloudHost || "storage.oraclecloud.com";
+
+/**
+ * The Storage Cloud server port
+ *
+ * @name iotcs․oracle․iot․client․storageCloudPort
+ * @global
+ * @type {number}
+ * @default 443
+ */
+lib.oracle.iot.client.storageCloudPort = lib.oracle.iot.client.storageCloudPort || 443;
+
+/**
+ * The maximum number of messages sent by the MessagesDispatcher
+ * in one request.
+ *
+ * @name iotcs․oracle․iot․client․device․maximumMessagesPerConnection
+ * @global
+ * @type {number}
+ * @default 100
+ */
 lib.oracle.iot.client.device.maximumMessagesPerConnection = lib.oracle.iot.client.device.maximumMessagesPerConnection || 100;
 
-/** @ignore */
+/**
+ * The actual polling interval (in milliseconds) used by the
+ * MessageDispatcher for sending/receiving messages. If this is
+ * lower than iotcs․oracle․iot․client․monitor․pollingInterval than
+ * then that variable will be used as polling interval.
+ * <br>
+ * This is not used for receiving messages when
+ * iotcs․oracle․iot․client․device․disableLongPolling is
+ * set to false.
+ *
+ * @name iotcs․oracle․iot․client․device․defaultMessagePoolingInterval
+ * @global
+ * @type {number}
+ * @default 3000
+ */
 lib.oracle.iot.client.device.defaultMessagePoolingInterval = lib.oracle.iot.client.device.defaultMessagePoolingInterval || 3000;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -312,7 +487,7 @@ lib.oracle.iot.tam.storePassword = lib.oracle.iot.tam.storePassword || null;
 // file: library/shared/$port-node.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and 
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -341,8 +516,10 @@ var forge = require('node-forge');
 // pre-requisites (internal to $port);
 var os = require('os');
 var https = require('https');
+var http = require('http');
 var querystring = require('querystring');
 var fs = require('fs');
+var url = require('url');
 
 var spawn = require('child_process').spawnSync;
 /**
@@ -366,8 +543,10 @@ var _getDiskSpace = function() {
             lines1.forEach(function (line) {
                 if (line.indexOf(__dirname.substring(0, 2)) > -1) {
                     var infos = line.match(/\d+/g);
-                    diskSpace.totalDiskSpace = infos[1];
-                    diskSpace.freeDiskSpace = infos[0];
+                    if (Array.isArray(infos)) {
+                        diskSpace.totalDiskSpace = infos[1];
+                        diskSpace.freeDiskSpace = infos[0];
+                    }
                 }
             });
         } else if (os.platform() === 'linux') {
@@ -375,8 +554,10 @@ var _getDiskSpace = function() {
             var str2 = prc2.stdout.toString();
             str2 = str2.replace(/\s/g,'  ');
             var infos = str2.match(/\s\d+\s/g);
-            diskSpace.freeDiskSpace = parseInt(infos[2]);
-            diskSpace.totalDiskSpace = (parseInt(infos[1]) + parseInt(infos[2]));
+            if (Array.isArray(infos)) {
+                diskSpace.freeDiskSpace = parseInt(infos[2]);
+                diskSpace.totalDiskSpace = (parseInt(infos[1]) + parseInt(infos[2]));
+            }
         }
     } catch (e) {
         //just ignore
@@ -386,19 +567,20 @@ var _getDiskSpace = function() {
 
 var tls = require('tls');
 tls.checkServerIdentity = function (host, cert) {
-    var cn = cert.subject.CN;
-    if (cn.startsWith('*.')) {
-        var i = host.indexOf('.');
-        if (i > 0) {
-            host = host.substring(i);
+    if (cert && cert.subject && cert.subject.CN) {
+        var cn = cert.subject.CN;
+        if ((typeof cn === 'string') && cn.startsWith('*.')) {
+            var i = host.indexOf('.');
+            if (i > 0) {
+                host = host.substring(i);
+            }
+            cn = cn.substring(1);
         }
-        cn = cn.substring(1);
+        if (cn === host) {
+            return;
+        }
     }
-    if (cn === host) {
-        return;
-    } else {
-        lib.error('SSL host name verification failed');
-    }
+    lib.error('SSL host name verification failed');
 };
 
 // implement porting interface
@@ -433,12 +615,34 @@ $port.https.req = function (options, payload, callback) {
     options.agent = false;
 
     if ((options.method !== 'GET') && ((options.path.indexOf('attributes') > -1) || (options.path.indexOf('actions') > -1))) {
-        options.headers['Content-Length'] = payload.length;
+        if (options.headers['Transfer-Encoding'] !== "chunked") {
+            options.headers['Content-Length'] = payload.length;
+        }
     }
+
+    var urlObj = url.parse(options.path, true);
+    if (urlObj.query) {
+        if (typeof urlObj.query === 'object') {
+            urlObj.query = querystring.stringify(urlObj.query);
+        }
+        urlObj.query = querystring.escape(urlObj.query);
+    }
+    options.path = url.format(urlObj);
+
+    // console.log();
+    // console.log("Request: " + new Date().getTime());
+    // console.log(options.path);
+    // var clone = Object.assign({}, options);
+    // delete clone.tam;
+    // delete clone.ca;
+    // console.log(clone);
+    // console.log(payload);
 
     var req = https.request(options, function (response) {
 
-        //console.log(response.statusCode + ' ' + response.statusMessage);
+        // console.log();
+        // console.log("Response: " + response.statusCode + ' ' + response.statusMessage);
+        // console.log(response.headers);
 
         // Continuously update stream with data
         var body = '';
@@ -447,17 +651,16 @@ $port.https.req = function (options, payload, callback) {
         });
         response.on('end', function () {
             // Data reception is done, do whatever with it!
-            //console.log('BODY: '+body);
-            if ((response.statusCode === 200) || (response.statusCode === 202)) {
+            // console.log(body);
+            if ((response.statusCode === 200) || (response.statusCode === 201) || (response.statusCode === 202)) {
                 if (response.headers && (typeof response.headers['x-min-acceptbytes'] !== 'undefined')
                     && (response.headers['x-min-acceptbytes'] !== '') && (response.headers['x-min-acceptbytes'] !== 0)){
                     callback(JSON.stringify({'x-min-acceptbytes': response.headers['x-min-acceptbytes']}));
                 } else {
                     callback(body);
-
                 }
             } else {
-                var error = new Error(JSON.stringify({statusCode: response.statusCode, statusMessage: response.statusMessage, body: body}));
+                var error = new Error(JSON.stringify({statusCode: response.statusCode, statusMessage: (response.statusMessage ? response.statusMessage : null), body: body}));
                 callback(body, error);
             }
         });
@@ -478,6 +681,183 @@ $port.https.req = function (options, payload, callback) {
     req.end();
 };
 
+$port.https.storageReq = function (options, storage, deliveryCallback, errorCallback, processCallback) {
+    options.protocol = options.protocol + ':';
+    options.rejectUnauthorized = true;
+    options.agent = false;
+
+    var isUpload = false;
+    if (options.method !== 'GET') {
+        isUpload = true;
+        if (options.headers['Transfer-Encoding'] !== "chunked") {
+            // FIXME: if Transfer-Encoding isn't chunked
+            options.headers['Content-Length'] = storage.getLength();
+        } else {
+            delete options.headers['Content-Length'];
+        }
+    }
+
+    var urlObj = url.parse(options.path, true);
+    if (urlObj.query) {
+        if (typeof urlObj.query === 'object') {
+            urlObj.query = querystring.stringify(urlObj.query);
+        }
+        urlObj.query = querystring.escape(urlObj.query);
+    }
+    options.path = url.format(urlObj);
+
+    // console.log();
+    // console.log("Request: " + new Date().getTime());
+    // console.log(options.path);
+    // console.log(options);
+
+    if (isUpload) {
+        _uploadStorageReq(options, storage, deliveryCallback, errorCallback, processCallback);
+    } else {
+        _downloadStorageReq(options, storage, deliveryCallback, errorCallback, processCallback);
+    }
+};
+
+var _uploadStorageReq = function(options, storage, deliveryCallback, errorCallback, processCallback) {
+    var encoding = storage.getEncoding();
+    var uploadBytes = 0;
+    var protocol = options.protocol.indexOf("https") !== -1 ? https : http;
+    var req = protocol.request(options, function (response) {
+        // console.log();
+        // console.log("Response: " + response.statusCode + ' ' + response.statusMessage);
+        // console.log(response.headers);
+
+        // Continuously update stream with data
+        var body = '';
+        response.on('data', function (d) {
+            body += d;
+        });
+        response.on('end', function () {
+            if (!req.aborted) {
+                if (response.statusCode === 201) {
+                    var lastModified = new Date(Date.parse(response.headers["last-modified"]));
+                    storage._.setMetadata(lastModified, uploadBytes);
+                    deliveryCallback(storage, null, uploadBytes);
+                } else {
+                    var error = new Error(JSON.stringify({
+                        statusCode: response.statusCode,
+                        statusMessage: (response.statusMessage ? response.statusMessage : null),
+                        body: body
+                    }));
+                    errorCallback(error);
+                }
+            }
+        });
+    });
+    req.on('timeout', function () {
+        errorCallback(new Error('connection timeout'));
+    });
+    req.on('error', function(error) {
+        errorCallback(error);
+    });
+    req.on('abort', function() {
+        if (processCallback) {
+            processCallback(storage, lib.StorageDispatcher.Progress.State.CANCELLED, uploadBytes);
+        }
+    });
+
+    var readableStream = storage.getInputStream();
+    if (readableStream) {
+        readableStream.on('data', function(chunk) {
+            if (storage._.isCancelled()) {
+                req.abort();
+                return;
+            }
+            req.write(chunk, encoding);
+            uploadBytes += chunk.length;
+            if (processCallback) {
+                processCallback(storage, lib.StorageDispatcher.Progress.State.IN_PROGRESS, uploadBytes);
+            }
+        }).on('end', function() {
+            if (storage._.isCancelled()) {
+                req.abort();
+                return;
+            }
+            req.end();
+        }).on('error', function (error) {
+            errorCallback(error);
+        });
+    } else {
+        errorCallback(new Error("Readable stream is not set for storage object. Use setInputStream."));
+    }
+};
+
+var _downloadStorageReq = function(options, storage, deliveryCallback, errorCallback, processCallback) {
+    var writableStream = storage.getOutputStream();
+    if (writableStream) {
+        var encoding = storage.getEncoding();
+        var downloadBytes = 0;
+        var protocol = options.protocol.indexOf("https") !== -1 ? https : http;
+        var req = protocol.request(options, function (response) {
+            // console.log();
+            // console.log("Response: " + response.statusCode + ' ' + response.statusMessage);
+            // console.log(response.headers);
+
+            // Continuously update stream with data
+            var body = '';
+            if (encoding) {
+                writableStream.setDefaultEncoding(encoding);
+            }
+            writableStream.on('error', function (err) {
+                errorCallback(err);
+            });
+
+            response.on('data', function (d) {
+                if (storage._.isCancelled()) {
+                    req.abort();
+                    return;
+                }
+                body += d;
+                downloadBytes += d.length;
+                writableStream.write(d);
+                if (processCallback) {
+                    processCallback(storage, lib.StorageDispatcher.Progress.State.IN_PROGRESS, downloadBytes);
+                }
+            });
+            response.on('end', function () {
+                if (!req.aborted) {
+                    if ((response.statusCode === 200) || (response.statusCode === 206)) {
+                        writableStream.end();
+                        var lastModified = new Date(Date.parse(response.headers["last-modified"]));
+                        storage._.setMetadata(lastModified, downloadBytes);
+                        deliveryCallback(storage, null, downloadBytes);
+                    } else {
+                        var error = new Error(JSON.stringify({
+                            statusCode: response.statusCode,
+                            statusMessage: (response.statusMessage ? response.statusMessage : null),
+                            body: body
+                        }));
+                        errorCallback(error);
+                    }
+                }
+            });
+        });
+        req.on('timeout', function () {
+            errorCallback(new Error('connection timeout'));
+        });
+        req.on('error', function (error) {
+            errorCallback(error);
+        });
+        req.on('abort', function() {
+            if (processCallback) {
+                processCallback(storage, lib.StorageDispatcher.Progress.State.CANCELLED, downloadBytes);
+            }
+        });
+        if (storage._.isCancelled()) {
+            req.abort();
+            return;
+        }
+        req.end();
+    } else {
+        errorCallback(new Error("Writable stream is not set for storage object. Use setOutputStream."));
+    }
+};
+
 $port.file = {};
 
 $port.file.store = function (path, data) {
@@ -493,6 +873,14 @@ $port.file.exists = function (path) {
         return fs.statSync(path).isFile();
     } catch (e) {
         return false;
+    }
+};
+
+$port.file.size = function (path) {
+    try {
+        return fs.statSync(path).size;
+    } catch (e) {
+        return -1;
     }
 };
 
@@ -548,13 +936,12 @@ $port.util.uuidv4 = function () {
     r16[8]  &= 0x3f;  // clear variant
     r16[8]  |= 0x80;  // set to IETF variant
     var i = 0;
-    var uuid = _b2h[r16[i++]] + _b2h[r16[i++]] + _b2h[r16[i++]] + _b2h[r16[i++]] + '-' +
+    return _b2h[r16[i++]] + _b2h[r16[i++]] + _b2h[r16[i++]] + _b2h[r16[i++]] + '-' +
         _b2h[r16[i++]] + _b2h[r16[i++]] + '-' +
         _b2h[r16[i++]] + _b2h[r16[i++]] + '-' +
         _b2h[r16[i++]] + _b2h[r16[i++]] + '-' +
         _b2h[r16[i++]] + _b2h[r16[i++]] + _b2h[r16[i++]] +
-        _b2h[r16[i++]] + _b2h[r16[i++]] + _b2h[r16[i++]];
-    return uuid;
+        _b2h[r16[i++]] + _b2h[r16[i++]] + _b2h[r16[i]];
 };
 
 $port.util.btoa = function (str) {
@@ -576,7 +963,7 @@ $port.util.diagnostics = function () {
     obj.macAddress = 'Unknown';
     var netInt = null;
     for (var key in net) {
-        if ((key !== 'lo') && (key.indexOf('Loopback') < 0) && (net[key].length > 0)) {
+        if (!key.match(/^lo\d?$/) && (key.indexOf('Loopback') < 0) && (net[key].length > 0)) {
             netInt = net[key][0];
             break;
         }
@@ -712,7 +1099,7 @@ $port.mqtt.close = function (client, callback) {
 // file: library/shared/$impl.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and 
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -730,6 +1117,105 @@ if (lib.debug) {
 /** @ignore */
 $impl.https = $impl.https || {};
 
+function QueueNode (data) {
+    this.data = data;
+    if (data.getJSONObject !== undefined) {
+        this.priority = ['LOWEST', 'LOW', 'MEDIUM', 'HIGH', 'HIGHEST'].indexOf(data.getJSONObject().priority);
+    } else {
+        this.priority = 'LOW';
+    }
+}
+
+// takes an array of objects with {data, priority}
+$impl.PriorityQueue = function (maxQueue) {
+    this.heap = [null];
+    this.maxQueue = maxQueue;
+};
+
+$impl.PriorityQueue.prototype = {
+    push: function(data) {
+        if (this.heap.length === (this.maxQueue + 1)) {
+            lib.error('maximum queue number reached');
+            return;
+        }
+        var node = new QueueNode(data);
+        this.bubble(this.heap.push(node) -1);
+    },
+
+    remove: function(data) {
+        if (this.heap.length === 1) {
+            return null;
+        }
+        var index = this.heap.findIndex(function(element, index) {
+            if (element && (element.data.name === data.name) && (element.data.type === data.type)) {
+                if (element.data._.internal.inputStream && element.data._.internal.inputStream.path &&
+                    element.data._.internal.inputStream.path === data._.internal.inputStream.path ) {
+                    return index;
+                } else if (element.data._.internal.outputStream && element.data._.internal.outputStream.path &&
+                    element.data._.internal.outputStream.path === data._.internal.outputStream.path ) {
+                    return index;
+                }
+            }
+        }, data);
+        return this.heap.splice(index, 1);
+    },
+
+    // removes and returns the data of highest priority
+    pop: function() {
+        if (this.heap.length === 1) {
+            return null;
+        }
+        if (this.heap.length === 2) {
+            var ret = this.heap.pop();
+            return ((ret && ret.data) ? ret.data : null);
+        }
+        var topVal = ((this.heap[1] && this.heap[1].data) ? this.heap[1].data : null);
+        this.heap[1] = this.heap.pop();
+        this.sink(1); return topVal;
+    },
+
+    // bubbles node i up the binary tree based on
+    // priority until heap conditions are restored
+    bubble: function(i) {
+        while (i > 1) {
+            var parentIndex = i >> 1; // <=> floor(i/2)
+
+            // if equal, no bubble (maintains insertion order)
+            if (!this.isHigherPriority(i, parentIndex)) break;
+
+            this.swap(i, parentIndex);
+            i = parentIndex;
+        }   },
+
+    // does the opposite of the bubble() function
+    sink: function(i) {
+        while (i*2 < this.heap.length - 1) {
+            // if equal, left bubbles (maintains insertion order)
+            var leftHigher = !this.isHigherPriority(i*2 +1, i*2);
+            var childIndex = leftHigher ? i*2 : i*2 +1;
+
+            // if equal, sink happens (maintains insertion order)
+            if (this.isHigherPriority(i,childIndex)) break;
+
+            this.swap(i, childIndex);
+            i = childIndex;
+        }   },
+
+    // swaps the addresses of 2 nodes
+    swap: function(i,j) {
+        var temp = this.heap[i];
+        this.heap[i] = this.heap[j];
+        this.heap[j] = temp;
+    },
+
+    // returns true if node i is higher priority than j
+    isHigherPriority: function(i,j) {
+        var prioI = ((this.heap[i] && this.heap[i].priority) ? this.heap[i].priority : 0);
+        var prioJ = ((this.heap[j] && this.heap[j].priority) ? this.heap[j].priority : 0);
+        return prioI < prioJ;
+    }
+};
+
 //@TODO: Default TAM Integration
 /** @ignore */
 $impl.https.req = $impl.https.req || function (options, payload, callback) {
@@ -743,7 +1229,20 @@ $impl.https.req = $impl.https.req || function (options, payload, callback) {
 };
 
 function _initTAM (callback) {
-    if (lib.oracle.iot.tam.store && (typeof window !== 'undefined') && location.hostname && location.protocol) {
+    if ((typeof window !== 'undefined') && lib.oracle.iot.client.serverUrl
+        && (typeof lib.oracle.iot.client.serverUrl === 'string')
+        && (typeof forge.util.parseUrl(lib.oracle.iot.client.serverUrl) === 'object')) {
+        var parsed = forge.util.parseUrl(lib.oracle.iot.client.serverUrl);
+        $impl.tam = {
+            getServerHost: function () {
+                return parsed.host;
+            },
+            getServerPort: function () {
+                return parsed.port;
+            }
+        };
+        callback();
+    } else if (lib.oracle.iot.tam.store && (typeof window !== 'undefined') && location.hostname && location.protocol) {
         var i = location.protocol.indexOf(':');
         var protocol = (i<0) ? location.protocol : location.protocol.substring(0, i);
         $port.https.req({
@@ -803,10 +1302,10 @@ function _httpsTAMReq (options, payload, callback) {
         }
         oracleIoT = false;
     }
-    _opt.headers = {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-    };
+
+    _opt.headers = {};
+    _opt.headers.Accept = 'application/json';
+    _opt.headers['Content-Type'] = 'application/json';
 
     //@TODO: Remove basic auth; only for tests and test server
     //@TODO: (jy) use lib.debug if this configuration is really/always needed for tests ...
@@ -876,14 +1375,14 @@ function _optionalArg(arg, types) {
 //@TODO: [v2] add support for {'array':'type'}
 function __isArgOfType(arg, type) {
     switch(typeof(type)) {
-    case 'function':
-    case 'object':
-        return (arg instanceof type);
-    case 'string':
-        return (type==='array')
-            ? Array.isArray(arg)
-            : (typeof(arg) === type);
-    default:
+        case 'function':
+        case 'object':
+            return (arg instanceof type);
+        case 'string':
+            return (type==='array')
+                ? Array.isArray(arg)
+                : (typeof(arg) === type);
+        default:
     }
     return false;
 }
@@ -894,7 +1393,7 @@ function __checkType(arg, types) {
     if (Array.isArray(types)) {
         var nomatch = types.every(function(type) { return !__isArgOfType(arg, type); });
         if (nomatch) {
-            lib.log('type mismatch: got '+argType+' but expecting any of '+types+')');
+            lib.log('type mismatch: got '+argType+' but expecting any of '+types.toString()+')');
             lib.error('illegal argument type');
             return;
         }
@@ -905,6 +1404,18 @@ function __checkType(arg, types) {
         lib.error('illegal argument type');
         return;
     }
+}
+
+/** @ignore */
+function _isEmpty(obj) {
+    if (obj === null || (typeof obj === 'undefined')) return true;
+    return (Object.getOwnPropertyNames(obj).length === 0);
+}
+
+/** @ignore */
+function _isStorageCloudURI(url) {
+    var urlObj = require('url').parse(url, true);
+    return (urlObj.host.indexOf(lib.oracle.iot.client.storageCloudHost) > -1);
 }
 
 
@@ -1069,8 +1580,7 @@ $impl.mqtt.MqttController.prototype.req = function (topic, payload, expect, call
         }
 
         if (expect && callback && (typeof callback === 'function')) {
-            var tempCallback = null;
-            tempCallback = function (message, error) {
+            var tempCallback = function (message, error) {
                 if (!message || error) {
                     callback(null, error);
                     return;
@@ -1106,7 +1616,7 @@ $impl.mqtt.MqttController.prototype.req = function (topic, payload, expect, call
 // file: library/device/$impl-dcl.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and 
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -1116,80 +1626,6 @@ $impl.mqtt.MqttController.prototype.req = function (topic, payload, expect, call
 
 /** @ignore */
 $impl.reqroot = '/iot/api/v2';
-
-function QueueNode (data) {
-    this.data = data;
-    this.priority = ['LOWEST','LOW','MEDIUM','HIGH','HIGHEST'].indexOf(data.getJSONObject().priority);
-}
-
-// takes an array of objects with {data, priority}
-$impl.PriorityQueue = function (maxQueue) {
-    this.heap = [null];
-    this.maxQueue = maxQueue;
-};
-
-$impl.PriorityQueue.prototype = {
-    push: function(data) {
-        if (this.heap.length === (this.maxQueue + 1)) {
-            lib.error('maximum queue number reached');
-            return;
-        }
-        var node = new QueueNode(data);
-        this.bubble(this.heap.push(node) -1);
-    },
-
-    // removes and returns the data of highest priority
-    pop: function() {
-        if (this.heap.length === 1) {
-            return null;
-        }
-        if (this.heap.length === 2) {
-            return this.heap.pop().data;
-        }
-        var topVal = this.heap[1].data;
-        this.heap[1] = this.heap.pop();
-        this.sink(1); return topVal;
-    },
-
-    // bubbles node i up the binary tree based on
-    // priority until heap conditions are restored
-    bubble: function(i) {
-        while (i > 1) {
-            var parentIndex = i >> 1; // <=> floor(i/2)
-
-            // if equal, no bubble (maintains insertion order)
-            if (!this.isHigherPriority(i, parentIndex)) break;
-
-            this.swap(i, parentIndex);
-            i = parentIndex;
-        }   },
-
-    // does the opposite of the bubble() function
-    sink: function(i) {
-        while (i*2 < this.heap.length - 1) {
-            // if equal, left bubbles (maintains insertion order)
-            var leftHigher = !this.isHigherPriority(i*2 +1, i*2);
-            var childIndex = leftHigher ? i*2 : i*2 +1;
-
-            // if equal, sink happens (maintains insertion order)
-            if (this.isHigherPriority(i,childIndex)) break;
-
-            this.swap(i, childIndex);
-            i = childIndex;
-        }   },
-
-    // swaps the addresses of 2 nodes
-    swap: function(i,j) {
-        var temp = this.heap[i];
-        this.heap[i] = this.heap[j];
-        this.heap[j] = temp;
-    },
-
-    // returns true if node i is higher priority than j
-    isHigherPriority: function(i,j) {
-        return this.heap[i].priority < this.heap[j].priority;
-    }
-};
 
 $impl.protocolReq = function (options, payload, callback, retryCallback, dcd) {
     if (!options.tam) {
@@ -1281,9 +1717,7 @@ $impl.mqtt.apiReq = function (options, payload, callback, retryCallback, dcd) {
                     dcd._.mqttController.disconnect(retryCallback);
                     return;
                 }
-            } catch (e) {
-
-            }
+            } catch (e) {}
         }
         callback(response_body, error);
     };
@@ -1342,9 +1776,7 @@ $impl.mqtt.apiReq = function (options, payload, callback, retryCallback, dcd) {
         }
         controller.req(topic, payload, expect, tempCallback);
     }
-
     _mqttControllerInit(dcd);
-
     callApi(dcd._.mqttController);
 };
 
@@ -1364,9 +1796,7 @@ $impl.https.bearerReq = function (options, payload, callback, retryCallback, dcd
                     });
                     return;
                 }
-            } catch (e) {
-
-            }
+            } catch (e) {}
         }
         callback(response_body, error);
     });
@@ -1377,7 +1807,7 @@ $impl.https.bearerReq = function (options, payload, callback, retryCallback, dcd
 // file: library/shared/Client.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and 
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -1423,7 +1853,7 @@ lib.Client = function () {
 lib.Client.prototype.createVirtualDevice = function (endpointId, deviceModel) {
     _mandatoryArg(endpointId, 'string');
     _mandatoryArg(deviceModel, 'object');
-    return new lib.AbstractVirtualDevice(endpointId, deviceModel, this);
+    return new lib.AbstractVirtualDevice(endpointId, deviceModel);
 };
 
 /**
@@ -1467,6 +1897,25 @@ lib.Client.prototype.getDeviceModel = function (deviceModelUrn, callback) {
     }, function () {
         self.getDeviceModel(deviceModelUrn, callback);
     }, (lib.$port.userAuthNeeded() ? null : (lib.$impl.DirectlyConnectedDevice ? new lib.$impl.DirectlyConnectedDevice() : new lib.$impl.EnterpriseClientImpl())));
+};
+
+/**
+ * Create a new {@link iotcs.device.StorageObject} with the given object name and mime&ndash;type.
+ *
+ * @param {String} name - the unique name to be used to reference the content in storage
+ * @param {String} type - The mime-type of the content.
+ * If not set, the mime&ndash;type defaults to {@link lib.device.StorageObject.MIME_TYPE}
+ * @returns {iotcs.device.StorageObject} a storage object
+ *
+ * @memberof iotcs.Client.prototype
+ * @function createStorageObject
+ */
+lib.Client.prototype.createStorageObject = function (name, type) {
+    _mandatoryArg(name, "string");
+    _optionalArg(type, "string");
+    var storage = new lib.device.StorageObject(null, name, type);
+    storage._.setDevice(this._.internalDev);
+    return storage;
 };
 
 
@@ -1560,8 +2009,8 @@ function _register(callback) {
 
 /** @ignore */
 function _unregister(id) {
-    if (!monitors[id]) {
-        lib.log('unknown monitor id #'+id);
+    if ((typeof id === 'undefined') || !monitors[id]) {
+        lib.log('unknown monitor id');
         return;
     }
     delete monitors[id];
@@ -1713,7 +2162,7 @@ lib.AbstractVirtualDevice.prototype.getEndpointId = function () {
  * @param {Object} attributes - An object holding a list of attribute name/
  * value pairs to be updated as part of this transaction,
  * e.g. <code>{ "temperature":23, ... }</code>. Note that keys shall refer
- * to device attribute names or aliases. 
+ * to device attribute names.
  *
  * @see {@link iotcs.enterprise.VirtualDevice}
  * @memberof iotcs.AbstractVirtualDevice.prototype
@@ -1817,8 +2266,10 @@ lib.UnifiedTrustStore = function (taStoreFileExt, taStorePasswordExt, forProvisi
         privateKey: null,
         publicKey: null,
         trustAnchors: null,
-        certificate: null
+        certificate: null,
+        connectedDevices: null
     };
+    this.userInfo = "#";
 
     var taStoreFile = taStoreFileExt || lib.oracle.iot.tam.store;
     var taStorePassword = taStorePasswordExt || lib.oracle.iot.tam.storePassword;
@@ -1841,7 +2292,12 @@ lib.UnifiedTrustStore = function (taStoreFileExt, taStorePasswordExt, forProvisi
             return;
         }
         var base64BlockStr = input.substring(1, input.indexOf('#'));
+        this.userInfo = input.substring(input.indexOf('#')) || this.userInfo;
         var encryptedData = forge.util.decode64(base64BlockStr);
+        if (encryptedData.length <= 0) {
+            lib.error('Invalid unified trust store');
+            return;
+        }
         var iv = forge.util.createBuffer();
         var encrypted = forge.util.createBuffer();
         for (var i = 0; i < lib.UnifiedTrustStore.constants.AES_BLOCK_SIZE; i++) {
@@ -1895,6 +2351,41 @@ lib.UnifiedTrustStore = function (taStoreFileExt, taStorePasswordExt, forProvisi
                 case lib.UnifiedTrustStore.constants.TAGS.publicKey:
                     self.trustStoreValues.publicKey = forge.pki.publicKeyFromAsn1(forge.asn1.fromDer(buf));
                     break;
+
+                case lib.UnifiedTrustStore.constants.TAGS.connectedDevice:
+                    if (!self.trustStoreValues.connectedDevices) {
+                        self.trustStoreValues.connectedDevices = {};
+                    }
+                    var _data = { error: false };
+                    var _output = new forge.util.ByteStringBuffer().putBytes(buf);
+                    connectedDevice_loop:
+                    while (!_output.isEmpty()) {
+                        var _tag = _output.getInt(8);
+                        var _length = (_output.getInt(16) >> 0);
+                        var _buf = _output.getBytes(_length);
+                        switch (_tag) {
+                            case lib.UnifiedTrustStore.constants.TAGS.clientId:
+                                _data.deviceId = _buf;
+                                break;
+
+                            case lib.UnifiedTrustStore.constants.TAGS.sharedSecret:
+                                _data.sharedSecret = _buf;
+                                break;
+
+                            default:
+                                lib.error("Invalid TAG inside indirect connected device data.");
+                                _data.error = true;
+                                break connectedDevice_loop;
+                        }
+                    }
+                    if (!_data.error && _data.deviceId && _data.sharedSecret) {
+                        self.trustStoreValues.connectedDevices[_data.deviceId] = _data.sharedSecret;
+                    }
+                    break;
+
+                default:
+                    lib.error('Invalid unified trust store TAG');
+                    return;
             }
         }
     };
@@ -1941,6 +2432,20 @@ lib.UnifiedTrustStore = function (taStoreFileExt, taStorePasswordExt, forProvisi
             buffer.putInt(tempBytes1.length, 16);
             buffer.putBytes(tempBytes1);
         }
+        if (self.trustStoreValues.connectedDevices) {
+            for (var deviceId in self.trustStoreValues.connectedDevices) {
+                buffer.putInt(lib.UnifiedTrustStore.constants.TAGS.connectedDevice, 8);
+                // deviceId.length + sharedSecret.length + 6
+                // where 6 bytes contains [ACTIVATION_ID_TAG|<icd activation id length> and [SHARED_SECRET_TAG|<icd shared secret length>
+                buffer.putInt(deviceId.length + self.trustStoreValues.connectedDevices[deviceId].length + 6, 16);
+                buffer.putInt(lib.UnifiedTrustStore.constants.TAGS.clientId, 8);
+                buffer.putInt(deviceId.length, 16);
+                buffer.putBytes(deviceId);
+                buffer.putInt(lib.UnifiedTrustStore.constants.TAGS.sharedSecret, 8);
+                buffer.putInt(self.trustStoreValues.connectedDevices[deviceId].length, 16);
+                buffer.putBytes(self.trustStoreValues.connectedDevices[deviceId]);
+            }
+        }
         var iv = forge.random.getBytesSync(lib.UnifiedTrustStore.constants.AES_BLOCK_SIZE);
         var key = forge.pkcs5.pbkdf2(taStorePassword, iv, lib.UnifiedTrustStore.constants.PBKDF2_ITERATIONS, lib.UnifiedTrustStore.constants.AES_KEY_SIZE);
         var cipher = forge.cipher.createCipher('AES-CBC', key);
@@ -1950,7 +2455,7 @@ lib.UnifiedTrustStore = function (taStoreFileExt, taStorePasswordExt, forProvisi
         var finalBuffer = forge.util.createBuffer();
         finalBuffer.putInt(lib.UnifiedTrustStore.constants.version, 8);
         finalBuffer.putBytes(forge.util.encode64(iv+cipher.output.getBytes()));
-        finalBuffer.putBytes('#');
+        finalBuffer.putBytes("\n" + this.userInfo);
         $port.file.store(taStoreFile, finalBuffer.getBytes());
     };
 
@@ -1990,17 +2495,45 @@ lib.UnifiedTrustStore.constants = {
     version: 33,
     AES_BLOCK_SIZE: 16,
     AES_KEY_SIZE: 16,
-    PBKDF2_ITERATIONS: 10000
+    PBKDF2_ITERATIONS: 10000,
+    TAGS: {}
 };
 
 lib.UnifiedTrustStore.constants.TAGS = {
+    /**
+     * The URI of the server, e.g., https://iotinst-mydomain.iot.us.oraclecloud.com:443
+     */
     serverUri: 1,
+    /** A client id is either an integration id (for enterprise clients), or an
+     * activation id (for device clients). An activation id may also be
+     * referred to a hardware id.
+     */
     clientId: 2,
+    /**
+     * The shared secret as plain text
+     */
     sharedSecret: 3,
+    /**
+     * For devices, the endpoint id TLV is omitted from the provisioning file
+     * (unless part of a CONNECTED_DEVICE_TAG TLV).
+     * For enterpise integrations, the endpoint id is set in the provisioning file
+     * by the inclusion of the second ID argument.
+     */
     endpointId: 4,
+    /**
+     * The trust anchor is the X509 cert
+     */
     trustAnchor: 5,
     privateKey: 6,
-    publicKey: 7
+    publicKey: 7,
+    /**
+     * The client id and shared secret of a device that can connect
+     * indirectly through the device client
+     *
+     * Connected device TLV =
+     * [CONNECTED_DEVICE_TAG|<length>|[CLIENT_ID_TAG|<icd activation id length>|<icd activation id>][SHARED_SECRET_TAG|<icd shared secrect length>|<icd shared secret>]]
+     */
+    connectedDevice: 8
 };
 
 
@@ -2011,18 +2544,19 @@ lib.UnifiedTrustStore.constants.TAGS = {
  *
  * @param {string} taStoreFile - the Trusted Assets Store file name.
  * @param {string} taStorePassword - the Trusted Assets Store password.
+ * @param {string} serverScheme - the scheme used to communicate with the server. Possible values are http(s) or mqtt(s).
  * @param {string} serverHost - the IoT CS server host name.
  * @param {number} serverPort - the IoT CS server port.
  * @param {string} clientId - activation ID for devices or client ID for application integrations.
  * @param {string} sharedSecret - the client's shared secret.
  * @param {string} truststore - the truststore file containing PEM-encoded trust anchors certificates to be used to validate the IoT CS server
  * certificate chain.
- * @param {string} serverScheme - the scheme used to communicate with the server. Possible values are http(s) or mqtt(s).
+ * @param {string} connectedDevices - array of indirect connect devices.
  *
  * @memberOf iotcs.UnifiedTrustStore
  * @function provision
  */
-lib.UnifiedTrustStore.provision = function (taStoreFile, taStorePassword, serverHost, serverPort, clientId, sharedSecret, truststore, serverScheme) {
+lib.UnifiedTrustStore.provision = function (taStoreFile, taStorePassword, serverScheme, serverHost, serverPort, clientId, sharedSecret, truststore, connectedDevices) {
     if (!taStoreFile) {
         throw 'No TA Store file provided';
     }
@@ -2033,9 +2567,10 @@ lib.UnifiedTrustStore.provision = function (taStoreFile, taStorePassword, server
         clientId: clientId,
         serverHost: serverHost,
         serverPort: serverPort,
-        serverScheme: (serverScheme ? serverScheme : 'http'),
+        serverScheme: (serverScheme ? serverScheme : 'https'),
         sharedSecret: sharedSecret,
-        trustAnchors: (truststore ? (Array.isArray(truststore) ? truststore : _loadTrustAnchorsBinary(truststore)) : [])
+        trustAnchors: (truststore ? (Array.isArray(truststore) ? truststore : _loadTrustAnchorsBinary(truststore)) : []),
+        connectedDevices: (connectedDevices ? connectedDevices : {})
     };
     new lib.UnifiedTrustStore(taStoreFile, taStorePassword, true).store(entries);
 };
@@ -2112,41 +2647,41 @@ function _loadTrustAnchorsBinary (truststore) {
  * lib.oracle.iot.tam.storePassword
  *
  */
-lib.device.TrustedAssetsManager = function (taStoreFileExt, taStorePasswordExt) {
-
+lib.device.TrustedAssetsManager = function (taStoreFile, taStorePassword) {
     this.clientId = null;
     this.sharedSecret = null;
     this.serverHost = null;
     this.serverPort = null;
     this.endpointId = null;
-    this.serverScheme = 'http';
+    this.serverScheme = 'https';
 
     this.privateKey = null;
     this.publicKey = null;
     this.certificate = null;
     this.trustAnchors = [];
+    this.connectedDevices = {};
 
-    var taStoreFile = taStoreFileExt || lib.oracle.iot.tam.store;
-    var taStorePassword = taStorePasswordExt || lib.oracle.iot.tam.storePassword;
+    var _taStoreFile = taStoreFile || lib.oracle.iot.tam.store;
+    var _taStorePassword = taStorePassword || lib.oracle.iot.tam.storePassword;
 
-    if (!taStoreFile) {
+    if (!_taStoreFile) {
         lib.error('No TA Store file defined');
         return;
     }
-    if (!taStorePassword) {
+    if (!_taStorePassword) {
         lib.error('No TA Store password defined');
         return;
     }
 
-    if (!taStoreFile.endsWith('.json')) {
-        this.unifiedTrustStore = new lib.UnifiedTrustStore(taStoreFile, taStorePassword, false);
+    if (!_taStoreFile.endsWith('.json')) {
+        this.unifiedTrustStore = new lib.UnifiedTrustStore(_taStoreFile, _taStorePassword, false);
         this.unifiedTrustStore.setValues(this);
     } else {
         this.load = function () {
-            var input = $port.file.load(taStoreFile);
+            var input = $port.file.load(_taStoreFile);
             var entries = JSON.parse(input);
 
-            if (!_verifyTaStoreContent(entries, taStorePassword)) {
+            if (!_verifyTaStoreContent(entries, _taStorePassword)) {
                 lib.error('TA Store not signed or tampered with');
                 return;
             }
@@ -2155,15 +2690,16 @@ lib.device.TrustedAssetsManager = function (taStoreFileExt, taStorePasswordExt) 
             this.serverHost = entries.serverHost;
             this.serverPort = entries.serverPort;
             this.serverScheme = entries.serverScheme;
-            this.sharedSecret = _decryptSharedSecret(entries.sharedSecret, taStorePassword);
+            this.sharedSecret = _decryptSharedSecret(entries.sharedSecret, _taStorePassword);
             this.trustAnchors = entries.trustAnchors;
+            this.connectedDevices = entries.connectedDevices;
 
             {
                 var keyPair = entries.keyPair;
                 if (keyPair) {
                     var p12Der = forge.util.decode64(entries.keyPair);
                     var p12Asn1 = forge.asn1.fromDer(p12Der, false);
-                    var p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, taStorePassword);
+                    var p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, _taStorePassword);
 
                     var bags = p12.getBags({
                         bagType: forge.pki.oids.certBag
@@ -2180,13 +2716,13 @@ lib.device.TrustedAssetsManager = function (taStoreFileExt, taStorePasswordExt) 
         };
 
         this.store = function () {
-            lib.log('store' + (this.privateKey !== null) + ' ' + this.endpointId);
+            lib.log('store ' + ((this.privateKey !== null) ? 'true' : 'false') + ' ' + this.endpointId);
             var keyPairEntry = null;
             if (this.privateKey) {
                 var p12Asn1 = forge.pkcs12.toPkcs12Asn1(
                     this.privateKey,
                     this.certificate,
-                    taStorePassword, {
+                    _taStorePassword, {
                         'friendlyName': this.endpointId
                     });
                 var p12Der = forge.asn1.toDer(p12Asn1).getBytes();
@@ -2197,15 +2733,16 @@ lib.device.TrustedAssetsManager = function (taStoreFileExt, taStorePasswordExt) 
                 'serverHost': this.serverHost,
                 'serverPort': this.serverPort,
                 'serverScheme': this.serverScheme,
-                'sharedSecret': _encryptSharedSecret(this.sharedSecret, taStorePassword),
+                'sharedSecret': _encryptSharedSecret(this.sharedSecret, _taStorePassword),
                 'trustAnchors': this.trustAnchors,
-                'keyPair': keyPairEntry
+                'keyPair': keyPairEntry,
+                'connectedDevices': this.connectedDevices
             };
 
-            entries = _signTaStoreContent(entries, taStorePassword);
+            entries = _signTaStoreContent(entries, _taStorePassword);
 
             var output = JSON.stringify(entries);
-            $port.file.store(taStoreFile, output);
+            $port.file.store(_taStoreFile, output);
         };
         this.load();
     }
@@ -2214,7 +2751,7 @@ lib.device.TrustedAssetsManager = function (taStoreFileExt, taStorePasswordExt) 
 /**
  * Retrieves the IoT CS server host name.
  *
- * @returns {String} the IoT CS server host name
+ * @returns {?string} the IoT CS server host name
  * or <code>null</code> if any error occurs retrieving the server host
  * name.
  *
@@ -2228,7 +2765,7 @@ lib.device.TrustedAssetsManager.prototype.getServerHost = function () {
 /**
  * Retrieves the IoT CS server port.
  *
- * @returns {Number} the IoT CS server port (a positive integer)
+ * @returns {?number} the IoT CS server port (a positive integer)
  * or <code>null</code> if any error occurs retrieving the server port.
  * 
  * @memberof iotcs.device.TrustedAssetsManager.prototype
@@ -2245,7 +2782,7 @@ lib.device.TrustedAssetsManager.prototype.getServerPort = function () {
  * used along with a client secret derived from the shared secret to perform
  * secret-based client authentication with the IoT CS server.
  *
- * @returns {string} the ID of this client.
+ * @returns {?string} the ID of this client.
  * or <code>null</code> if any error occurs retrieving the client ID.
  *
  * @memberof iotcs.device.TrustedAssetsManager.prototype
@@ -2256,9 +2793,22 @@ lib.device.TrustedAssetsManager.prototype.getClientId = function () {
 };
 
 /**
+ * Retrieves the IoT CS connected devices.
+ *
+ * @returns {?Object} the IoT CS connected devices
+ * or <code>null</code> if any error occurs retrieving connected devices.
+ *
+ * @memberof iotcs.device.TrustedAssetsManager.prototype
+ * @function getConnectedDevices
+ */
+lib.device.TrustedAssetsManager.prototype.getConnectedDevices = function () {
+    return this.connectedDevices;
+};
+
+/**
  * Retrieves the public key to be used for certificate request.
  *
- * @returns {string} the device public key as a PEM-encoded string
+ * @returns {?string} the device public key as a PEM-encoded string
  * or <code>null</code> if any error occurs retrieving the public key.
  *
  * @memberof iotcs.device.TrustedAssetsManager.prototype
@@ -2277,7 +2827,7 @@ lib.device.TrustedAssetsManager.prototype.getPublicKey = function () {
  * Authority (CA) to be used to validate the IoT CS server
  * certificate chain.
  *
- * @returns {Array} the PEM-encoded trust anchor certificates.
+ * @returns {?Array} the PEM-encoded trust anchor certificates.
  * or <code>null</code> if any error occurs retrieving the trust anchor.
  *
  * @memberof iotcs.device.TrustedAssetsManager.prototype
@@ -2329,10 +2879,10 @@ lib.device.TrustedAssetsManager.prototype.setEndpointCredentials = function (end
         this.endpointId = '';
     }
     try {
-        if (certificate && certificate.length > 0) {
-            this.certificate = forge.pki.certificateFromPem(certificate);
-        } else {
+        if (!certificate || certificate.length <= 0) {
             this.certificate = _generateSelfSignedCert(this.privateKey, this.publicKey, this.clientId);
+        } else {
+            this.certificate = forge.pki.certificateFromPem(certificate);
         }
     } catch (e) {
         lib.error('Error generating certificate: ' + e);
@@ -2354,7 +2904,7 @@ lib.device.TrustedAssetsManager.prototype.setEndpointCredentials = function (end
 /**
  * Retrieves the assigned endpoint ID.
  *
- * @return {string} the assigned endpoint ID or <code>null</code> if any error occurs retrieving the 
+ * @return {?string} the assigned endpoint ID or <code>null</code> if any error occurs retrieving the
  * endpoint ID.
  *
  * @memberof iotcs.device.TrustedAssetsManager.prototype
@@ -2370,7 +2920,7 @@ lib.device.TrustedAssetsManager.prototype.getEndpointId = function () {
 /**
  * Retrieves the assigned endpoint certificate.
  *
- * @returns {string} the PEM-encoded certificate or <code>null</code> if no certificate was assigned,
+ * @returns {?string} the PEM-encoded certificate or <code>null</code> if no certificate was assigned,
  * or if any error occurs retrieving the endpoint certificate.
  *
  * @memberof iotcs.device.TrustedAssetsManager.prototype
@@ -2437,9 +2987,9 @@ lib.device.TrustedAssetsManager.prototype.generateKeyPair = function (algorithm,
  * private key. This method is only use for assertion-based client authentication
  * with the IoT CS.
  *
- * @param {array} data the bytes to sign.
- * @param {string} algorithm the algorithm to use.
- * @returns {array} the signature bytes
+ * @param {Array|string} data - a byte string to sign.
+ * @param {string} algorithm - the algorithm to use.
+ * @returns {?Array} the signature bytes
  * or <code>null</code> if any error occurs retrieving the necessary key
  * material or performing the operation.
  *
@@ -2499,41 +3049,23 @@ lib.device.TrustedAssetsManager.prototype.signWithPrivateKey = function (data, a
     return signature;
 };
 
-
-/**
- * Retrieves the client's shared secret to be used for post-production
- * registration (optional). The shared secret may be generated if not
- * already provisioned. The returned shared secret is encrypted using some
- * pre-provisioned key - such as a public key / certificate of the IoT CS.
- * <p>
- * Until IOT-9708 is fixed returns shared secret in clear.
- *
- * @returns {string} the encrypted shared secret
- * or <code>null</code> if any error occurs retrieving the necessary key
- * material or performing the operation.
- *
- * @memberof iotcs.device.TrustedAssetsManager.prototype
- * @function getEncryptedSharedSecret
- */
-lib.device.TrustedAssetsManager.prototype.getEncryptedSharedSecret = function () {
-    return this.sharedSecret;
-};
-
 /**
  * Signs the provided data using the specified algorithm and the shared
- * secret. This method is only use for secret-based client authentication
- * with the IoT CS server.
+ * secret of the device indicated by the given hardware id.
+ * Passing <code>null</code> for <code>hardwareId</code> is identical to passing
+ * {@link #getClientId()}.
  *
- * @param {array} data the bytes to be signed.
- * @param {string} algorithm the hash algorithm to use.
- * @return {array} the signature bytes
+ * @param {Array} data - the bytes to be signed.
+ * @param {string} algorithm - the hash algorithm to use.
+ * @param {?string} hardwareId - the hardware id of the device whose shared secret is to be used for signing.
+ * @return {?Array} the signature bytes
  * or <code>null</code> if any error occurs retrieving the necessary key
  * material or performing the operation.
  *
  * @memberof iotcs.device.TrustedAssetsManager.prototype
  * @function signWithSharedSecret
  */
-lib.device.TrustedAssetsManager.prototype.signWithSharedSecret = function (data, algorithm) {
+lib.device.TrustedAssetsManager.prototype.signWithSharedSecret = function (data, algorithm, hardwareId) {
     var digest = null;
     if (!algorithm) {
         lib.error('Algorithm cannot be null');
@@ -2543,9 +3075,20 @@ lib.device.TrustedAssetsManager.prototype.signWithSharedSecret = function (data,
         lib.error('Data cannot be null');
         return null;
     }
+    var secretKey;
+    if (hardwareId === null || hardwareId == this.clientId) {
+        secretKey = this.sharedSecret;
+    } else {
+        secretKey = this.connectedDevices[hardwareId];
+    }
+
+    if (secretKey === null || (typeof secretKey === "undefined")) {
+        lib.log("Shared secret is not provisioned for " + (hardwareId ? hardwareId : this.clientId) + " device");
+        return null;
+    }
     try {
         var hmac = forge.hmac.create();
-        hmac.start(algorithm, this.sharedSecret);
+        hmac.start(algorithm, secretKey);
         hmac.update(data);
         digest = hmac.digest();
         // lib.log(digest.toHex());
@@ -2600,9 +3143,7 @@ lib.device.TrustedAssetsManager.prototype.reset = function () {
 
 lib.device.TrustedAssetsManager.prototype.buildClientAssertion = function () {
     var id = (!this.isActivated() ? this.getClientId() : this.getEndpointId());
-
     var now = ((typeof this.serverDelay === 'undefined') ? Date.now() : (Date.now() + this.serverDelay));
-
     var exp = parseInt((now + 900000)/1000);
     var header = {
         typ: 'JWT',
@@ -2624,7 +3165,7 @@ lib.device.TrustedAssetsManager.prototype.buildClientAssertion = function () {
 
     try {
         if (!this.isActivated()) {
-            var digest = this.signWithSharedSecret(inputToSign, "sha256");
+            var digest = this.signWithSharedSecret(inputToSign, "sha256", null);
             signed = forge.util.encode64(forge.util.hexToBytes(digest.toHex()));
         } else {
             var signatureBytes = this.signWithPrivateKey(inputToSign, "sha256");
@@ -2637,10 +3178,18 @@ lib.device.TrustedAssetsManager.prototype.buildClientAssertion = function () {
 
     inputToSign = inputToSign + '.' + signed;
     inputToSign = inputToSign.replace(/\+/g, '-').replace(/\//g, '_').replace(/\=+$/, '');
-
     return inputToSign;
 };
 
+/**
+ * Retrieves the IoT CS server scheme.
+ *
+ * @returns {?string} the IoT CS server scheme,
+ * or <code>null</code> if any error occurs retrieving the server scheme.
+ *
+ * @memberof iotcs.device.TrustedAssetsManager.prototype
+ * @function getServerScheme
+ */
 lib.device.TrustedAssetsManager.prototype.getServerScheme = function () {
     return this.serverScheme;
 };
@@ -2649,20 +3198,22 @@ lib.device.TrustedAssetsManager.prototype.getServerScheme = function () {
  * Provisions the designated Trusted Assets Store with the provided provisioning assets.
  * The provided shared secret will be encrypted using the provided password.
  * 
- * @param {string} taStoreFile the Trusted Assets Store file name.
- * @param {string} taStorePassword the Trusted Assets Store password.
- * @param {string} serverHost the IoT CS server host name.
- * @param {number} serverPort the IoT CS server port.
- * @param {string} clientId the ID of the client.
- * @param {string} sharedSecret the client's shared secret.
- * @param {string} truststore the truststore file containing PEM-encoded trust anchors certificates to be used to validate the IoT CS server
- * certificate chain.
+ * @param {string} taStoreFile - the Trusted Assets Store file name.
+ * @param {string} taStorePassword - the Trusted Assets Store password.
+ * @param {string} serverScheme - the scheme used to communicate with the server. Possible values are http(s) or mqtt(s).
+ * @param {string} serverHost - the IoT CS server host name.
+ * @param {number} serverPort - the IoT CS server port.
+ * @param {string} clientId - the ID of the client.
+ * @param {string} sharedSecret - the client's shared secret.
+ * @param {string} truststore - the truststore file containing PEM-encoded trust anchors certificates
+ * to be used to validate the IoT CS server certificate chain.
+ * @param {Object} connectedDevices - indirect connect devices.
  *
  * @memberof iotcs.device.TrustedAssetsManager
  * @function provision
  *
  */
-lib.device.TrustedAssetsManager.provision = function (taStoreFile, taStorePassword, serverHost, serverPort, clientId, sharedSecret, truststore, serverScheme) {
+lib.device.TrustedAssetsManager.provision = function (taStoreFile, taStorePassword, serverScheme, serverHost, serverPort, clientId, sharedSecret, truststore, connectedDevices) {
 	if (!taStoreFile) {
 		throw 'No TA Store file provided';
 	}
@@ -2673,9 +3224,10 @@ lib.device.TrustedAssetsManager.provision = function (taStoreFile, taStorePasswo
 		'clientId' : clientId,
 		'serverHost' : serverHost,
 		'serverPort' : serverPort,
-        'serverScheme' : (serverScheme ? serverScheme : 'http'),
+        'serverScheme' : (serverScheme ? serverScheme : 'https'),
 		'sharedSecret' : _encryptSharedSecret(sharedSecret, taStorePassword),
-		'trustAnchors' : (truststore ? (Array.isArray(truststore) ? truststore : _loadTrustAnchors(truststore)) : [])
+		'trustAnchors' : (truststore ? (Array.isArray(truststore) ? truststore : _loadTrustAnchors(truststore)) : []),
+        'connectedDevices': (connectedDevices ? connectedDevices : {})
 	};
 	entries = _signTaStoreContent(entries, taStorePassword);
 	var output = JSON.stringify(entries);
@@ -2715,13 +3267,23 @@ function _signTaStoreContent (taStoreEntries, password) {
         + '{' + taStoreEntries.serverScheme + '}'
     	+ '{' + taStoreEntries.sharedSecret + '}'
     	+ '{' + taStoreEntries.trustAnchors + '}'
-    	+ '{' + taStoreEntries.keyPair + '}';
+    	+ '{' + (taStoreEntries.keyPair ? taStoreEntries.keyPair : null) + '}'
+        + '{' + (taStoreEntries.connectedDevices ? taStoreEntries.connectedDevices : {}) + '}';
     var key = _pbkdf(password);
     var hmac = forge.hmac.create();
 	hmac.start('sha256', key);
 	hmac.update(data);
-	taStoreEntries.signature = hmac.digest().toHex();
-	return taStoreEntries;
+    return {
+        clientId: taStoreEntries.clientId,
+        serverHost: taStoreEntries.serverHost,
+        serverPort: taStoreEntries.serverPort,
+        serverScheme: taStoreEntries.serverScheme,
+        sharedSecret: taStoreEntries.sharedSecret,
+        trustAnchors: taStoreEntries.trustAnchors,
+        keyPair: (taStoreEntries.keyPair ? taStoreEntries.keyPair : null),
+        connectedDevices: (taStoreEntries.connectedDevices ? taStoreEntries.connectedDevices : {}),
+        signature: hmac.digest().toHex()
+    };
 }
 
 /** @ignore */
@@ -2732,7 +3294,8 @@ function _verifyTaStoreContent (taStoreEntries, password) {
     + (taStoreEntries.serverScheme ? ('{' + taStoreEntries.serverScheme + '}') : '')
 	+ '{' + taStoreEntries.sharedSecret + '}'
 	+ '{' + taStoreEntries.trustAnchors + '}'
-	+ '{' + taStoreEntries.keyPair + '}';
+	+ '{' + (taStoreEntries.keyPair ? taStoreEntries.keyPair : null) + '}'
+    + (taStoreEntries.connectedDevices ? '{' + taStoreEntries.connectedDevices + '}' : '');
     var key = _pbkdf(password);
     var hmac = forge.hmac.create();
     hmac.start('sha256', key);
@@ -2777,12 +3340,11 @@ function _loadTrustAnchors (truststore) {
 }
 
 
-
 //////////////////////////////////////////////////////////////////////////////
 // file: library/device/Message.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -2801,7 +3363,7 @@ lib.message = {};
  * This object helps in the construction of a general type
  * message to be sent to the server. This object and
  * it's components are used as utilities by the
- * low level API clients, like the DirectlyConnectedDevice
+ * Messaging API clients, like the DirectlyConnectedDevice
  * or GatewayDevice or indirectly by the MessageDispatcher.
  *
  * @memberOf iotcs.message
@@ -2809,7 +3371,6 @@ lib.message = {};
  * @class
  */
 lib.message.Message = function () {
-
     Object.defineProperty(this, '_',{
         enumerable: false,
         configurable: false,
@@ -2834,7 +3395,6 @@ lib.message.Message = function () {
             payload: {}
         }
     });
-
 };
 
 /**
@@ -2847,7 +3407,6 @@ lib.message.Message = function () {
  * @function payload
  */
 lib.message.Message.prototype.payload = function (payload) {
-
     _mandatoryArg(payload, 'object');
 
     this._.internalObject.payload = payload;
@@ -2864,7 +3423,6 @@ lib.message.Message.prototype.payload = function (payload) {
  * @function source
  */
 lib.message.Message.prototype.source = function (source) {
-
     _mandatoryArg(source, 'string');
 
     if(this._.internalObject.source === null) {
@@ -2883,7 +3441,6 @@ lib.message.Message.prototype.source = function (source) {
  * @function destination
  */
 lib.message.Message.prototype.destination = function (destination) {
-
     _mandatoryArg(destination, 'string');
 
     this._.internalObject.destination = destination;
@@ -2916,7 +3473,6 @@ lib.message.Message.prototype.getJSONObject = function () {
  * @function type
  */
 lib.message.Message.prototype.type = function (type) {
-
     _mandatoryArg(type, 'string');
     if (Object.keys(lib.message.Message.Type).indexOf(type) < 0) {
         lib.error('invalid message type given');
@@ -2942,9 +3498,7 @@ lib.message.Message.prototype.type = function (type) {
  * @function format
  */
 lib.message.Message.prototype.format = function (format) {
-
     _mandatoryArg(format, 'string');
-
     this._.internalObject.payload.format = format;
     return this;
 };
@@ -2961,7 +3515,6 @@ lib.message.Message.prototype.format = function (format) {
  * @function dataItem
  */
 lib.message.Message.prototype.dataItem = function (dataKey, dataValue) {
-
     _mandatoryArg(dataKey, 'string');
 
     if (!('data' in this._.internalObject.payload)) {
@@ -2986,7 +3539,6 @@ lib.message.Message.prototype.dataItem = function (dataKey, dataValue) {
  * @function priority
  */
 lib.message.Message.prototype.priority = function (priority) {
-
     _mandatoryArg(priority, 'string');
     if (Object.keys(lib.message.Message.Priority).indexOf(priority) < 0) {
         lib.error('invalid priority given');
@@ -2995,6 +3547,71 @@ lib.message.Message.prototype.priority = function (priority) {
 
     this._.internalObject.priority = priority;
     return this;
+};
+
+/**
+ * @constant MAX_KEY_LENGTH
+ * @memberOf iotcs.message.Message
+ * @type {number}
+ * @default 2048
+ */
+Object.defineProperty(lib.message.Message, 'MAX_KEY_LENGTH',{
+    enumerable: false,
+    configurable: false,
+    writable: false,
+    value: 2048
+});
+
+/**
+ * @constant MAX_STRING_VALUE_LENGTH
+ * @memberOf iotcs.message.Message
+ * @type {number}
+ * @default 65536
+ */
+Object.defineProperty(lib.message.Message, 'MAX_STRING_VALUE_LENGTH',{
+    enumerable: false,
+    configurable: false,
+    writable: false,
+    value: 64 * 1024
+});
+
+/** @ignore */
+function _recursiveSearchInMessageObject(obj, callback){
+    var arrKeys = Object.keys(obj);
+    for (var i = 0; i < arrKeys.length; i++) {
+        callback(arrKeys[i], obj[arrKeys[i]]);
+        if (typeof obj[arrKeys[i]] === 'object') {
+            _recursiveSearchInMessageObject(obj[arrKeys[i]], callback);
+        }
+    }
+}
+
+/**
+ * This is a helper method for checking if an array of
+ * created messages pass the boundaries on key/value length
+ * test. If the test does not pass an error is thrown.
+ *
+ * @param {iotcs.message.Message[]} messages - the array of
+ * messages that need to be tested
+ *
+ * @see {@link iotcs.message.Message.MAX_KEY_LENGTH}
+ * @see {@link iotcs.message.Message.MAX_STRING_VALUE_LENGTH}
+ * @memberOf iotcs.message.Message
+ * @function checkMessagesBoundaries
+ */
+lib.message.Message.checkMessagesBoundaries = function (messages) {
+    _mandatoryArg(messages, 'array');
+    messages.forEach(function (message) {
+        _mandatoryArg(message, lib.message.Message);
+        _recursiveSearchInMessageObject(message.getJSONObject(), function (key, value) {
+            if (_getUtf8BytesLength(key) > lib.message.Message.MAX_KEY_LENGTH) {
+                lib.error('Max length for key in message item exceeded');
+            }
+            if ((typeof value === 'string') && (_getUtf8BytesLength(value) > lib.message.Message.MAX_STRING_VALUE_LENGTH)) {
+                lib.error('Max length for value in message item exceeded');
+            }
+        });
+    });
 };
 
 /**
@@ -3059,7 +3676,6 @@ lib.message.Message.Priority = {
  * @function buildResponseMessage
  */
 lib.message.Message.buildResponseMessage = function (requestMessage, statusCode, headers, body, url) {
-
     _optionalArg(requestMessage, 'object');
     _mandatoryArg(statusCode, 'number');
     _optionalArg(headers, 'object');
@@ -3078,6 +3694,29 @@ lib.message.Message.buildResponseMessage = function (requestMessage, statusCode,
         .source((requestMessage && requestMessage.destination) ? requestMessage.destination : '')
         .destination((requestMessage && requestMessage.source) ? requestMessage.source : '')
         .payload(payload);
+    return message;
+};
+
+/**
+ * This is a helper method for building a response wait
+ * message to notify RequestDispatcher that response for server
+ * will be sent to the server later. RequestDispatcher doesn't
+ * send these kind of messages to the server.
+ * This is mostly used by handlers registered
+ * with the RequestDispatcher in asynchronous cases, for example,
+ * when device creates storage object by URI.
+ *
+ * @returns {iotcs.message.Message} The response message
+ * that notified about waiting final response.
+ *
+ * @see {@link iotcs.device.util.RequestDispatcher}
+ * @see {@link iotcs.device.util.DirectlyConnectedDevice#createStorageObject}
+ * @memberOf iotcs.message.Message
+ * @function buildResponseWaitMessage
+ */
+lib.message.Message.buildResponseWaitMessage = function() {
+    var message = new lib.message.Message();
+    message._.internalObject.type = "RESPONSE_WAIT";
     return message;
 };
 
@@ -3128,7 +3767,6 @@ lib.message.Message.AlertMessage.Severity = {
  * @function buildAlertMessage
  */
 lib.message.Message.AlertMessage.buildAlertMessage = function (format, description, severity) {
-
     _mandatoryArg(format, 'string');
     _mandatoryArg(description, 'string');
     _mandatoryArg(severity, 'string');
@@ -3140,7 +3778,8 @@ lib.message.Message.AlertMessage.buildAlertMessage = function (format, descripti
     var payload = {
         format: format,
         severity: severity,
-        description: description
+        description: description,
+        data: {}
     };
     var message = new lib.message.Message();
     message.type(lib.message.Message.Type.ALERT)
@@ -3188,7 +3827,6 @@ lib.message.Message.ResourceMessage.Type = {
  * @function getMD5ofList
  */
 lib.message.Message.ResourceMessage.getMD5ofList = function (stringArray) {
-
     _mandatoryArg(stringArray, 'array');
     stringArray.forEach( function (str) {
         _mandatoryArg(str, 'string');
@@ -3236,7 +3874,6 @@ lib.message.Message.ResourceMessage.getMD5ofList = function (stringArray) {
  * @function buildResourceMessage
  */
 lib.message.Message.ResourceMessage.buildResourceMessage = function (resources, endpointName, reportType, rM) {
-
     _mandatoryArg(resources, 'array');
     resources.forEach( function(resource) {
         _mandatoryArg(resource, 'object');
@@ -3259,12 +3896,11 @@ lib.message.Message.ResourceMessage.buildResourceMessage = function (resources, 
 
     var payload = {
         type: 'JSON',
-        value: {
-            reportType: reportType,
-            endpointName: endpointName,
-            resources: resources
-        }
+        value: {}
     };
+    payload.value.reportType = reportType;
+    payload.value.endpointName = endpointName;
+    payload.value.resources = resources;
     if (rM) {
         payload.value.reconciliationMark = rM;
     }
@@ -3322,7 +3958,6 @@ lib.message.Message.ResourceMessage.Resource.Status = {
  * @function buildResource
  */
 lib.message.Message.ResourceMessage.Resource.buildResource = function (name, path, methods, status, endpointName) {
-
     _mandatoryArg(name, 'string');
     _mandatoryArg(path, 'string');
     _mandatoryArg(methods, 'string');
@@ -3339,12 +3974,11 @@ lib.message.Message.ResourceMessage.Resource.buildResource = function (name, pat
         return;
     }
 
-    var obj = {
-        name: name,
-        path: path,
-        status: status,
-        methods: methods.toString()
-    };
+    var obj = {};
+    obj.name = name;
+    obj.path = path;
+    obj.status = status;
+    obj.methods = methods.toString();
 
     if (endpointName) {
         obj.endpointName = endpointName;
@@ -3358,7 +3992,7 @@ lib.message.Message.ResourceMessage.Resource.buildResource = function (name, pat
 // file: library/device/DirectlyConnectedDeviceImpl.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -3368,7 +4002,6 @@ lib.message.Message.ResourceMessage.Resource.buildResource = function (name, pat
 
 /** @ignore */
 $impl.DirectlyConnectedDevice = function (taStoreFile, taStorePassword, gateway) {
-
     Object.defineProperty(this, '_',{
         enumerable: false,
         configurable: false,
@@ -3433,14 +4066,13 @@ $impl.DirectlyConnectedDevice = function (taStoreFile, taStorePassword, gateway)
         configurable: false,
         writable: false,
         value: function (activation, callback) {
-
             self._.refreshing = true;
 
             var inputToSign = self._.tam.buildClientAssertion();
 
             if (!inputToSign) {
                 self._.refreshing = false;
-                var error1 = lib.createError('error on generating oauth signature', e);
+                var error1 = lib.createError('error on generating oauth signature');
                 if (callback) {
                     callback(error1);
                 }
@@ -3468,7 +4100,6 @@ $impl.DirectlyConnectedDevice = function (taStoreFile, taStorePassword, gateway)
             };
 
             $impl.protocolReq(options, payload, function (response_body, error) {
-
                 self._.refreshing = false;
 
                 if (!response_body || error || !response_body.token_type || !response_body.access_token) {
@@ -3497,9 +4128,7 @@ $impl.DirectlyConnectedDevice = function (taStoreFile, taStorePassword, gateway)
                                             self._.refresh_bearer(activation, callback);
                                             return;
                                         }
-                                    } catch (e) {
-
-                                    }
+                                    } catch (e) {}
                                 }
                                 if (activation) {
                                     self._.tam.setEndpointCredentials(self._.tam.getClientId(), null);
@@ -3513,11 +4142,8 @@ $impl.DirectlyConnectedDevice = function (taStoreFile, taStorePassword, gateway)
                                     });
                                     return;
                                 }
-
                             }
-                        } catch (e) {
-
-                        }
+                        } catch (e) {}
                         if (callback) {
                             callback(error);
                         }
@@ -3540,17 +4166,105 @@ $impl.DirectlyConnectedDevice = function (taStoreFile, taStorePassword, gateway)
                 if (callback) {
                     callback();
                 }
-
             }, null, self);
         }
     });
 
+    Object.defineProperty(this._, 'storage_authToken',{
+        enumerable: false,
+        configurable: true,
+        writable: false,
+        value: ""
+    });
 
+    Object.defineProperty(this._, 'storageContainerUrl',{
+        enumerable: false,
+        configurable: true,
+        writable: false,
+        value: ""
+    });
+
+    Object.defineProperty(this._, 'storage_authTokenStartTime',{
+        enumerable: false,
+        configurable: true,
+        writable: false,
+        value: ""
+    });
+
+    Object.defineProperty(this._, 'storage_refreshing',{
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: false
+    });
+
+    Object.defineProperty(this._, 'refresh_storage_authToken',{
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function (callback) {
+            self._.storage_refreshing = true;
+
+            var options = {
+                path: $impl.reqroot + '/provisioner/storage',
+                method: 'GET',
+                headers: {
+                    'Authorization': self._.bearer,
+                    'X-EndpointId': self._.tam.getEndpointId()
+                },
+                tam: self._.tam
+            };
+            var refresh_function = function (response, error) {
+                self._.storage_refreshing = false;
+
+                if (!response || error || !response.storageContainerUrl || !response.authToken) {
+                    if (error) {
+                        if (callback) {
+                            callback(error);
+                        }
+                    } else {
+                        self._.refresh_storage_authToken(callback);
+                    }
+                    return;
+                }
+
+                delete self._.storage_authToken;
+                Object.defineProperty(self._, 'storage_authToken',{
+                    enumerable: false,
+                    configurable: true,
+                    writable: false,
+                    value: response.authToken
+                });
+
+                delete self._.storageContainerUrl;
+                Object.defineProperty(self._, 'storageContainerUrl',{
+                    enumerable: false,
+                    configurable: true,
+                    writable: false,
+                    value: response.storageContainerUrl
+                });
+
+                delete self._.storage_authTokenStartTime;
+                Object.defineProperty(self._, 'storage_authTokenStartTime',{
+                    enumerable: false,
+                    configurable: true,
+                    writable: false,
+                    value: Date.now()
+                });
+
+                if (callback) {
+                    callback();
+                }
+            };
+            $impl.protocolReq(options, "", refresh_function, function() {
+                self._.refresh_storage_authToken(callback);
+            }, self);
+        }
+    });
 };
 
 /** @ignore */
 $impl.DirectlyConnectedDevice.prototype.activate = function (deviceModelUrns, callback) {
-
     _mandatoryArg(deviceModelUrns, 'array');
     _mandatoryArg(callback, 'function');
 
@@ -3566,7 +4280,6 @@ $impl.DirectlyConnectedDevice.prototype.activate = function (deviceModelUrns, ca
     //function enroll(host, port, id, secret, cert, device_register_handler) {
 
     function private_get_policy(error) {
-
         if (error) {
             callback(null, lib.createError('error on get policy for activation', error));
             return;
@@ -3583,13 +4296,11 @@ $impl.DirectlyConnectedDevice.prototype.activate = function (deviceModelUrns, ca
         };
 
         $impl.protocolReq(options, "", function (response_body, error) {
-
             if (!response_body || error || !response_body.keyType || !response_body.hashAlgorithm || !response_body.keySize) {
                 self._.activating = false;
                 callback(null, lib.createError('error on get policy for activation', error));
                 return;
             }
-
             private_key_generation_and_activation(response_body);
         }, null, self);
     }
@@ -3598,7 +4309,6 @@ $impl.DirectlyConnectedDevice.prototype.activate = function (deviceModelUrns, ca
         var algorithm = parsed.keyType;
         var hashAlgorithm = parsed.hashAlgorithm;
         var keySize = parsed.keySize;
-
         var isGenKeys = null;
 
         try {
@@ -3620,9 +4330,7 @@ $impl.DirectlyConnectedDevice.prototype.activate = function (deviceModelUrns, ca
         var payload = {};
 
         try {
-
-            var client_secret = self._.tam.signWithSharedSecret(content, 'sha256');
-
+            var client_secret = self._.tam.signWithSharedSecret(content, 'sha256', null);
             var publicKey = self._.tam.getPublicKey();
             publicKey = publicKey.substring(publicKey.indexOf('----BEGIN PUBLIC KEY-----')
                 + '----BEGIN PUBLIC KEY-----'.length,
@@ -3650,9 +4358,6 @@ $impl.DirectlyConnectedDevice.prototype.activate = function (deviceModelUrns, ca
                 signature: signature,
                 deviceModels: deviceModelUrns
             };
-
-            self._.tam.setEndpointCredentials(null, null);
-
         } catch (e) {
             self._.activating = false;
             callback(null, lib.createError('certificate generation failed on activation',e));
@@ -3670,10 +4375,7 @@ $impl.DirectlyConnectedDevice.prototype.activate = function (deviceModelUrns, ca
             tam: self._.tam
         };
 
-        //console.log(JSON.stringify(payload, null, 4));
-
         $impl.protocolReq(options, JSON.stringify(payload), function (response_body, error) {
-
             if (!response_body || error || !response_body.endpointState || !response_body.endpointId) {
                 self._.activating = false;
                 callback(null,lib.createError('invalid response on activation',error));
@@ -3695,18 +4397,15 @@ $impl.DirectlyConnectedDevice.prototype.activate = function (deviceModelUrns, ca
             }
 
             self._.refresh_bearer(false, function (error) {
-
                 self._.activating = false;
 
                 if (error) {
                     callback(null,lib.createError('error on authorization after activation',error));
                     return;
                 }
-
                 callback(self);
             });
         }, null, self);
-
     }
 
     self._.activating = true;
@@ -3727,15 +4426,36 @@ $impl.DirectlyConnectedDevice.prototype.getEndpointId = function () {
     return this._.tam.getEndpointId();
 };
 
+/** @ignore */
 function _getUtf8BytesLength(string) {
     return forge.util.createBuffer(string, 'utf8').length();
 }
+
+/** @ignore */
+function _optimizeOutgoingMessage(obj) {
+    if (!__isArgOfType(obj, 'object')) { return; }
+    if (_isEmpty(obj.properties)) { delete obj.properties; }
+    return obj;
+}
+
+/** @ignore */
+function _updateURIinMessagePayload(payload) {
+    if (payload.data) {
+        Object.keys(payload.data).forEach(function (key) {
+            if (payload.data[key] instanceof lib.ExternalObject) {
+                payload.data[key] = payload.data[key].getURI();
+            }
+        });
+    }
+    return payload;
+}
+
 
 //////////////////////////////////////////////////////////////////////////////
 // file: library/device/DirectlyConnectedDeviceUtil.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -3774,13 +4494,13 @@ lib.device.util = {};
  * to be used for trusted assets manager creation. This is optional.
  * If none is given the default global library parameter is used:
  * lib.oracle.iot.tam.storePassword
+ * @param {boolean} [gateway] - indicate creation of a GatewayDevice representation
  *
  * @memberOf iotcs.device.util
  * @alias DirectlyConnectedDevice
  * @class
  */
 lib.device.util.DirectlyConnectedDevice = function (taStoreFile, taStorePassword, gateway) {
-
     Object.defineProperty(this, '_',{
         enumerable: false,
         configurable: false,
@@ -3828,6 +4548,16 @@ lib.device.util.DirectlyConnectedDevice = function (taStoreFile, taStorePassword
                 }
                 return;
             }
+
+            try {
+                lib.message.Message.checkMessagesBoundaries(messages);
+            } catch (e) {
+                if (errorCallback) {
+                    errorCallback(messages, e);
+                }
+                return;
+            }
+
             var bodyArray = [];
             var i;
             var len = messages.length;
@@ -3835,7 +4565,7 @@ lib.device.util.DirectlyConnectedDevice = function (taStoreFile, taStorePassword
             for (i = 0; i < len; i++) {
                 var messagePush = messages[i].getJSONObject();
                 if (self._.internalDev._.serverDelay) {
-                    bodyArray.push({
+                    bodyArray.push(_optimizeOutgoingMessage({
                         clientId: messagePush.clientId,
                         source: messagePush.source,
                         destination: messagePush.destination,
@@ -3845,10 +4575,11 @@ lib.device.util.DirectlyConnectedDevice = function (taStoreFile, taStorePassword
                         eventTime: messagePush.eventTime + self._.internalDev._.serverDelay,
                         type: messagePush.type,
                         properties: messagePush.properties,
-                        payload: messagePush.payload
-                    });
+                        payload: _updateURIinMessagePayload(messagePush.payload)
+                    }));
                 } else {
-                    bodyArray.push(messagePush);
+                    messagePush.payload = _updateURIinMessagePayload(messagePush.payload);
+                    bodyArray.push(_optimizeOutgoingMessage(messagePush));
                 }
             }
             var post_body = JSON.stringify(bodyArray);
@@ -3870,7 +4601,6 @@ lib.device.util.DirectlyConnectedDevice = function (taStoreFile, taStorePassword
                 tam: dcd._.tam
             };
             $impl.protocolReq(options, post_body, function (response_body, error) {
-
                 if (!response_body || error) {
                     var err = error;
                     if (messages.length > 0) {
@@ -3912,6 +4642,90 @@ lib.device.util.DirectlyConnectedDevice = function (taStoreFile, taStorePassword
         }
     });
 
+    Object.defineProperty(this._, 'isStorageAuthenticated', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function () {
+            return (dcd._.storageContainerUrl && dcd._.storage_authToken);
+        }
+    });
+
+    Object.defineProperty(this._, 'isStorageTokenExpired', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function () {
+            // period in minutes recalculated in milliseconds
+            return ((dcd._.storage_authTokenStartTime + lib.oracle.iot.client.storageTokenPeriod * 60000) < Date.now());
+        }
+    });
+
+    Object.defineProperty(this._, 'sync_storage', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function (storage, deliveryCallback, errorCallback, processCallback, timeout) {
+            if (!dcd.isActivated()) {
+                var error = lib.createError('device not yet activated');
+                if (errorCallback) {
+                    errorCallback(storage, error);
+                }
+                return;
+            }
+
+            if (!self._.isStorageAuthenticated() || self._.isStorageTokenExpired()) {
+                dcd._.refresh_storage_authToken(function() {
+                    self._.sync_storage(storage, deliveryCallback, errorCallback, processCallback, timeout);
+                });
+                return;
+            }
+
+            if (!storage.getURI()) {
+                storage._.setURI(dcd._.storageContainerUrl + "/" + storage.getName());
+            }
+            var urlObj = require('url').parse(storage.getURI(), true);
+            var options = {
+                path: urlObj.path,
+                host: urlObj.host,
+                hostname: urlObj.hostname,
+                port: urlObj.port || lib.oracle.iot.client.storageCloudPort,
+                protocol: urlObj.protocol.slice(0, -1),
+                headers: {
+                    'X-Auth-Token': dcd._.storage_authToken
+                }
+            };
+
+            if (storage.getInputStream()) {
+                // Upload file
+                options.method = "PUT";
+                options.headers['Transfer-Encoding'] = "chunked";
+                options.headers['Content-Type'] = storage.getType();
+                var encoding = storage.getEncoding();
+                if (encoding) options.headers['Content-Encoding'] = encoding;
+            } else {
+                // Download file
+                options.method = "GET";
+            }
+
+            $port.https.storageReq(options, storage, deliveryCallback, function(error) {
+                if (error) {
+                    var exception = null;
+                    try {
+                        exception = JSON.parse(error.message);
+                        if (exception.statusCode && (exception.statusCode === 401)) {
+                            dcd._.refresh_storage_authToken(function () {
+                                self._.sync_storage(storage, deliveryCallback, errorCallback, processCallback, timeout);
+                            });
+                            return;
+                        }
+                    } catch (e) {}
+                    errorCallback(storage, error, -1);
+                }
+            }, processCallback);
+        }
+    });
+
     if (dcd._.tam.getServerScheme && (dcd._.tam.getServerScheme().indexOf('mqtt') > -1)) {
 
         /*Object.defineProperty(this._, 'receiver',{
@@ -3938,9 +4752,7 @@ lib.device.util.DirectlyConnectedDevice = function (taStoreFile, taStorePassword
         });*/
 
         var messageRegisterMonitor = null;
-
         messageRegisterMonitor = new $impl.Monitor(function () {
-
             if (!dcd.isActivated()) {
                 return;
             }
@@ -3969,13 +4781,9 @@ lib.device.util.DirectlyConnectedDevice = function (taStoreFile, taStorePassword
                         ' of unprocessed requests.');
                 }
             }, dcd);
-
         });
-
         messageRegisterMonitor.start();
-
     }
-
 };
 
 /**
@@ -4005,7 +4813,6 @@ lib.device.util.DirectlyConnectedDevice = function (taStoreFile, taStorePassword
  * @function activate
  */
 lib.device.util.DirectlyConnectedDevice.prototype.activate = function (deviceModelUrns, callback) {
-
     if (this.isActivated()) {
         lib.error('cannot activate an already activated device');
         return;
@@ -4073,7 +4880,6 @@ lib.device.util.DirectlyConnectedDevice.prototype.getEndpointId = function () {
  * the actual error from sending as the second parameter.
  */
 lib.device.util.DirectlyConnectedDevice.prototype.send = function (messages, callback) {
-
     if (!this.isActivated()) {
         lib.error('device not activated yet');
         return;
@@ -4108,7 +4914,6 @@ lib.device.util.DirectlyConnectedDevice.prototype.send = function (messages, cal
  * timeout period.
  */
 lib.device.util.DirectlyConnectedDevice.prototype.receive = function (timeout, callback) {
-
     if (!this.isActivated()) {
         lib.error('device not activated yet');
         return;
@@ -4146,7 +4951,7 @@ lib.device.util.DirectlyConnectedDevice.prototype.receive = function (timeout, c
         if (self._.receiver) {
             monitor = new $impl.Monitor(handleReceivedMessages);
             monitor.start();
-        } else if (lib.oracle.iot.client.device.disableLongPolling) {
+        } else if (lib.oracle.iot.client.device.disableLongPolling || self._.internalDev._.mqttController) {
             monitor = new $impl.Monitor(handleSendReceiveMessages);
             monitor.start();
         } else {
@@ -4188,13 +4993,144 @@ lib.device.util.DirectlyConnectedDevice.prototype.close = function () {
     if (this.dispatcher) {
         this.dispatcher._.stop();
     }
+    if (this.storageDispatcher) {
+        this.storageDispatcher._.stop();
+    }
 };
+
+/**
+ * Create a new {@link iotcs.StorageObject}.
+ *
+ * <p>
+ * createStorageObject method works in two modes:
+ * </p><p>
+ * 1. device.createStorageObject(name, type) -
+ * Create a new {@link iotcs.StorageObject} with given object name and mime&ndash;type.
+ * </p><pre>
+ * Parameters:
+ * {String} name - the unique name to be used to reference the content in storage
+ * {?String} [type] - The mime-type of the content. If <code>type</code> is <code>null</code> or omitted,
+ * the mime&ndash;type defaults to {@link iotcs.StorageObject.MIME_TYPE}.
+ *
+ * Returns:
+ * {iotcs.StorageObject} StorageObject
+ * </pre><p>
+ * 2. device.createStorageObject(uri, callback) -
+ * Create a new {@link iotcs.StorageObject} from the URL for a named object in storage and return it in a callback.
+ * </p><pre>
+ * Parameters:
+ * {String} url - the URL of the object in the storage cloud
+ * {function(storage, error)} callback - callback called once the getting storage data completes.
+ * </pre>
+ *
+ * @param {String} arg1 - first argument
+ * @param {String | function} arg2 - second argument
+ *
+ * @see {@link http://www.iana.org/assignments/media-types/media-types.xhtml|IANA Media Types}
+ * @memberOf iotcs.device.util.DirectlyConnectedDevice.prototype
+ * @function createStorageObject
+ */
+lib.device.util.DirectlyConnectedDevice.prototype.createStorageObject = function (arg1, arg2) {
+    _mandatoryArg(arg1, "string");
+    var storage = null;
+    if ((typeof arg2 === "string") || (typeof arg2 === "undefined") || arg2 === null) {
+        // DirectlyConnectedDevice.createStorageObject(name, type)
+        storage = new lib.StorageObject(null, arg1, arg2);
+        storage._.setDevice(this);
+        return storage;
+    } else {
+        // DirectlyConnectedDevice.createStorageObject(uri, callback)
+        _mandatoryArg(arg2, "function");
+        if (!this.isActivated()) {
+            lib.error('device not activated yet');
+            return;
+        }
+        var url = arg1;
+        var callback = arg2;
+        var self = this;
+        if (!this._.isStorageAuthenticated() || this._.isStorageTokenExpired()) {
+            self._.internalDev._.refresh_storage_authToken(function() {
+                self.createStorageObject(url, callback);
+            });
+        } else {
+            var fullContainerUrl = this._.internalDev._.storageContainerUrl + "/";
+            // url starts with fullContainerUrl
+            if (url.indexOf(fullContainerUrl) !== 0) {
+                callback(null, new Error("Storage Cloud URL is invalid."));
+                return;
+            }
+            var name = url.substring(fullContainerUrl.length);
+            var urlObj = require('url').parse(url, true);
+            var options = {
+                path: urlObj.path,
+                host: urlObj.host,
+                hostname: urlObj.hostname,
+                port: urlObj.port || lib.oracle.iot.client.storageCloudPort,
+                protocol: urlObj.protocol,
+                method: "HEAD",
+                headers: {
+                    'X-Auth-Token': this._.internalDev._.storage_authToken
+                },
+                rejectUnauthorized: true,
+                agent: false
+            };
+
+            // console.log();
+            // console.log("Request: " + new Date().getTime());
+            // console.log(options.path);
+            // console.log(options);
+
+            var protocol = options.protocol.indexOf("https") !== -1 ? require('https') : require('http');
+            var req = protocol.request(options, function (response) {
+
+                // console.log();
+                // console.log("Response: " + response.statusCode + ' ' + response.statusMessage);
+                // console.log(response.headers);
+
+                var body = '';
+                response.on('data', function (d) {
+                    body += d;
+                });
+                response.on('end', function () {
+                    if (response.statusCode === 200) {
+                        var type = response.headers["content-type"];
+                        var encoding = response.headers["content-encoding"];
+                        var date = new Date(Date.parse(response.headers["last-modified"]));
+                        var len = parseInt(response.headers["content-length"]);
+                        storage = new lib.StorageObject(url, name, type, encoding, date, len);
+                        storage._.setDevice(self);
+                        callback(storage);
+                    } else if (response.statusCode === 401) {
+                        self._.internalDev._.refresh_storage_authToken(function () {
+                            self.createStorageObject(url, callback);
+                        });
+                    } else {
+                        var e = new Error(JSON.stringify({
+                            statusCode: response.statusCode,
+                            statusMessage: (response.statusMessage ? response.statusMessage : null),
+                            body: body
+                        }));
+                        callback(null, e);
+                    }
+                });
+            });
+            req.on('timeout', function () {
+                callback(null, new Error('connection timeout'));
+            });
+            req.on('error', function (error) {
+                callback(null, error);
+            });
+            req.end();
+        }
+    }
+};
+
 
 //////////////////////////////////////////////////////////////////////////////
 // file: library/device/GatewayDeviceUtil.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -4203,9 +5139,9 @@ lib.device.util.DirectlyConnectedDevice.prototype.close = function () {
  */
 
 /**
- * This represents a GatewayDevice in the low level API.
+ * This represents a GatewayDevice in the Messaging API.
  * It has the exact same specifications and capabilities as
- * a directly connected device from the low level API and additionally
+ * a directly connected device from the Messaging API and additionally
  * it has the capability to register indirectly connected devices.
  *
  * @param {string} [taStoreFile] - trusted assets store file path
@@ -4231,7 +5167,6 @@ lib.device.util.GatewayDevice.constructor = lib.device.util.GatewayDevice;
 
 /** @inheritdoc */
 lib.device.util.GatewayDevice.prototype.activate = function (deviceModelUrns, callback) {
-
     if (this.isActivated()) {
         lib.error('cannot activate an already activated device');
         return;
@@ -4258,28 +5193,52 @@ lib.device.util.GatewayDevice.prototype.activate = function (deviceModelUrns, ca
 };
 
 /**
- * Register an indirectly-connected device with the cloud
- * service. An indirectly-connected device only needs to be
- * registered once. After registering the indirectly-connected
- * device, the caller is responsible for keeping track of what
- * devices have been registered, the metadata, and for
- * persisting the endpoint id. On subsequent boots, the same
- * endpoint id is to be used for the indirectly-connected
- * device. Registering an indirectly-connected device that has
- * already been registered will result in an error given by the
- * server.
- * <p>
- * The hardwareId is a unique identifier within the Cloud
- * Service instance. The metadata argument should typically contain all the standard
- * metadata (the constants documented in This object) along
- * with any other vendor defined metadata.
+ * Register an indirectly-connected device with the cloud service and specify whether
+ * the gateway device is required to have the appropriate credentials for activating
+ * the indirectly-connected device.
  *
- * @param {string} hardwareid - an identifier unique within
- * the Cloud Service instance
- * @param {Object} metadata - the metadata of the device
- * @param {string[]} deviceModelUrns - array of device model
- * URNs supported by the indirectly connected device
- * @param {function(Object)} callback - the callback function. This
+ * The <code>restricted</code> parameter controls whether or not the client
+ * library is <em>required</em> to supply credentials for activating
+ * the indirectly-connected device. The client library will
+ * <em>always</em> supply credentials for an indirectly-connected
+ * device whose trusted assets have been provisioned to the client.
+ * If, however, the trusted assets of the indirectly-connected device
+ * have not been provisioned to the client, the client library can
+ * create credentials that attempt to restrict the indirectly connected
+ * device to this gateway device.
+ *
+ * Pass <code>true</code> for the <code>restricted</code> parameter
+ * to ensure the indirectly-connected device cannot be activated
+ * by this gateway device without presenting credentials. If <code>restricted</code>
+ * is <code>true</code>, the client library will provide credentials to the server.
+ * The server will reject the activation request if the indirectly connected
+ * device is not allowed to roam to this gateway device.
+ *
+ * Pass <code>false</code> to allow the indirectly-connected device to be activated
+ * without presenting credentials if the trusted assets of the
+ * indirectly-connected device have not been provisioned to the client.
+ * If <code>restricted</code> is <code>false</code>, the client library will provide
+ * credentials if, and only if, the credentials have been provisioned to the
+ * client. The server will reject the activation if credentials are required
+ * but not supplied, or if the provisioned credentials do not allow the
+ * indirectly connected device to roam to this gateway device.
+ *
+ * The <code>hardwareId</code> is a unique identifier within the cloud service
+ * instance and may not be <code>null</code>. If one is not present for the device,
+ * it should be generated based on other metadata such as: model, manufacturer,
+ * serial number, etc.
+ *
+ * The <code>metaData</code> Object should typically contain all the standard
+ * metadata (the constants documented in this class) along with any other
+ * vendor defined metadata.
+ *
+ * @param {boolean} restricted - indicate whether or not credentials are required
+ * for activating the indirectly connected device
+ * @param {!string} hardwareId - an identifier unique within the Cloud Service instance
+ * @param {Object} metaData - The metadata of the device
+ * @param {string[]} deviceModelUrns - array of device model URNs
+ * supported by the indirectly connected device
+ * @param {function} callback - the callback function. This
  * function is called with the following argument: the endpoint id
  * of the indirectly-connected device is the registration was successful
  * or null and an error object as the second parameter: callback(id, error).
@@ -4290,17 +5249,20 @@ lib.device.util.GatewayDevice.prototype.activate = function (deviceModelUrns, ca
  * @memberof iotcs.device.util.GatewayDevice.prototype
  * @function registerDevice
  */
-lib.device.util.GatewayDevice.prototype.registerDevice = function (hardwareId, metaData, deviceModelUrns, callback) {
-
+lib.device.util.GatewayDevice.prototype.registerDevice = function (restricted, hardwareId, metaData, deviceModelUrns, callback) {
     if (!this.isActivated()) {
         lib.error('device not activated yet');
         return;
     }
 
+    if (typeof (restricted) !== 'boolean') {
+        lib.log('type mismatch: got '+ typeof (restricted) +' but expecting any of boolean)');
+        lib.error('illegal argument type');
+        return;
+    }
     _mandatoryArg(hardwareId, 'string');
     _mandatoryArg(metaData, 'object');
     _mandatoryArg(callback, 'function');
-
     deviceModelUrns.forEach(function (urn) {
         _mandatoryArg(urn, 'string');
     });
@@ -4310,13 +5272,33 @@ lib.device.util.GatewayDevice.prototype.registerDevice = function (hardwareId, m
     payload.deviceModels = deviceModelUrns;
 
     var self = this;
+    var data = self._.internalDev._.tam.getEndpointId();
+    // If the ICD has been provisioned, use the shared secret to generate the
+    // signature for the indirect activation request.
+    // If this call return null, then the ICD has not been provisioned.
+    var signature = self._.internalDev._.tam.signWithSharedSecret(data, "sha256", hardwareId);
+
+    // If the signature is null, then the ICD was not provisioned. But if
+    // the restricted flag is true, then we generate a signature which will
+    // cause the ICD to be locked (for roaming) to the gateway
+    if (restricted && (signature === null)) {
+        signature = self._.internalDev._.tam.signWithPrivateKey(data, "sha256");
+    }
+
+    if (signature !== null) {
+        if (typeof signature === 'object') {
+            payload.signature = forge.util.encode64(signature.bytes());
+        } else {
+            payload.signature = forge.util.encode64(signature);
+        }
+    }
 
     var indirect_request;
 
     indirect_request = function () {
         var options = {
             path: $impl.reqroot + '/activation/indirect/device'
-                    + (lib.oracle.iot.client.device.allowDraftDeviceModels ? '' : '?createDraft=false'),
+            + (lib.oracle.iot.client.device.allowDraftDeviceModels ? '' : '?createDraft=false'),
             method: 'POST',
             headers: {
                 'Authorization': self._.internalDev._.bearer,
@@ -4342,9 +5324,7 @@ lib.device.util.GatewayDevice.prototype.registerDevice = function (hardwareId, m
     };
 
     indirect_request();
-
 };
-
 
 //////////////////////////////////////////////////////////////////////////////
 // file: library/device/DeviceModelFactory.js
@@ -4360,7 +5340,6 @@ lib.device.util.GatewayDevice.prototype.registerDevice = function (hardwareId, m
 
 /**@ignore*/
 $impl.DeviceModelFactory = function () {
-
     if ($impl.DeviceModelFactory.prototype._singletonInstance) {
         return $impl.DeviceModelFactory.prototype._singletonInstance;
     }
@@ -4372,7 +5351,6 @@ $impl.DeviceModelFactory = function () {
 
 /**@ignore*/
 $impl.DeviceModelFactory.prototype.getDeviceModel = function (dcd, deviceModelUrn, callback) {
-
     _mandatoryArg(dcd, lib.device.util.DirectlyConnectedDevice);
 
     if (!dcd.isActivated()) {
@@ -4424,7 +5402,7 @@ $impl.DeviceModelFactory.prototype.getDeviceModel = function (dcd, deviceModelUr
 // file: library/device/TestConnectivity.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -4534,6 +5512,7 @@ $impl.TestConnectivity.prototype.testHandler = function (requestMessage) {
     return lib.message.Message.buildResponseMessage(requestMessage, 200, {}, JSON.stringify(obj), '');
 };
 
+/** @ignore */
 function _strRepeat(str, qty) {
     if (qty < 1) return '';
     var result = '';
@@ -4552,7 +5531,7 @@ function _strRepeat(str, qty) {
 // file: library/device/MessageDispatcher.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -4598,15 +5577,14 @@ function _strRepeat(str, qty) {
  * @class
  *
  * @param {iotcs.device.util.DirectlyConnectedDevice} dcd - The directly
- * connected device (low level API) associated with this message dispatcher
+ * connected device (Messaging API) associated with this message dispatcher
  */
 lib.device.util.MessageDispatcher = function (dcd) {
-
     _mandatoryArg(dcd, lib.device.util.DirectlyConnectedDevice);
-
     if (dcd.dispatcher) {
         return dcd.dispatcher;
     }
+    var self = this;
 
     Object.defineProperty(this, '_', {
         enumerable: false,
@@ -4626,14 +5604,14 @@ lib.device.util.MessageDispatcher = function (dcd) {
         enumerable: false,
         configurable: false,
         get: function () {
-            return this._.onDelivery;
+            return self._.onDelivery;
         },
         set: function (newValue) {
             if (!newValue || (typeof newValue !== 'function')) {
                 lib.error('trying to set something to onDelivery that is not a function!');
                 return;
             }
-            this._.onDelivery = newValue;
+            self._.onDelivery = newValue;
         }
     });
 
@@ -4643,14 +5621,14 @@ lib.device.util.MessageDispatcher = function (dcd) {
         enumerable: false,
         configurable: false,
         get: function () {
-            return this._.onError;
+            return self._.onError;
         },
         set: function (newValue) {
             if (!newValue || (typeof newValue !== 'function')) {
                 lib.error('trying to set something to onDelivery that is not a function!');
                 return;
             }
-            this._.onError = newValue;
+            self._.onError = newValue;
         }
     });
 
@@ -4665,6 +5643,70 @@ lib.device.util.MessageDispatcher = function (dcd) {
         writable: false,
         value: function (message) {
             queue.push(message);
+        }
+    });
+
+    Object.defineProperty(this._, 'storageDependencies', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: {
+            keys: [],
+            values: []
+        }
+    });
+
+    Object.defineProperty(this._, 'failMessageClientIdArray', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: []
+    });
+
+    Object.defineProperty(this._, 'addStorageDependency', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function (storage, msgClientId) {
+            var index = self._.storageDependencies.keys.indexOf(storage);
+            if (index == -1) {
+                // add new KV in storageDependencies
+                self._.storageDependencies.keys.push(storage);
+                self._.storageDependencies.values.push([msgClientId]);
+            } else {
+                // add value for key
+                self._.storageDependencies.values[index].push(msgClientId);
+            }
+        }
+    });
+
+    Object.defineProperty(this._, 'removeStorageDependency', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function (storage) {
+            var completed = (storage.getSyncStatus() === lib.device.StorageObject.SyncStatus.IN_SYNC);
+            var index = self._.storageDependencies.keys.indexOf(storage);
+            self._.storageDependencies.keys.splice(index, 1);
+            var msgClientIds = self._.storageDependencies.values.splice(index, 1)[0];
+            if (!completed && msgClientIds.length > 0) {
+                //save failed clientIds
+                msgClientIds.forEach(function (msgClientId) {
+                    if (self._.failMessageClientIdArray.indexOf(msgClientId) === -1) self._.failMessageClientIdArray.push(msgClientId);
+                });
+            }
+        }
+    });
+
+    Object.defineProperty(this._, 'isContentDependent', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function (clientId) {
+            for (var i = 0; i < self._.storageDependencies.values.length; ++i) {
+                if (self._.storageDependencies.values[i].indexOf(clientId) !== -1) return true;
+            }
+            return false;
         }
     });
 
@@ -4741,12 +5783,12 @@ lib.device.util.MessageDispatcher = function (dcd) {
                 ipAddress: 'Unknown',
                 macAddress: 'Unknown',
                 totalDiskSpace: 'Unknown',
-                version: 'Unknown'
+                version: 'Unknown',
+                startTime: startTime
             };
             if ($port.util.diagnostics) {
                 obj = $port.util.diagnostics();
             }
-            obj.startTime = startTime;
             return lib.message.Message.buildResponseMessage(requestMessage, 200, {}, JSON.stringify(obj), '');
         },
         "deviceModels/urn:oracle:iot:dcd:capability:diagnostics/testConnectivity": function (requestMessage) {
@@ -4780,9 +5822,6 @@ lib.device.util.MessageDispatcher = function (dcd) {
         "deviceModels/urn:oracle:iot:dcd:capability:diagnostics/testConnectivity": 'GET,PUT'
     };
 
-
-    var self = this;
-
     var deliveryCallback = function (messages) {
         totalMessagesSent = totalMessagesSent + messages.length;
         messages.forEach(function (message) {
@@ -4811,14 +5850,24 @@ lib.device.util.MessageDispatcher = function (dcd) {
             totalMessagesReceived = totalMessagesReceived + 1;
             totalBytesReceived = totalBytesReceived + _getUtf8BytesLength(JSON.stringify(message));
             if (message.type === lib.message.Message.Type.REQUEST) {
-                self.queue(self.getRequestDispatcher().dispatch(message));
+                var responseMessage = self.getRequestDispatcher().dispatch(message);
+                if (responseMessage) {
+                    self.queue(responseMessage);
+                }
             }
             message = client._.get_received_message();
         }
     };
 
     var longPollingStarted = false;
-
+    var pushMessage = function (array, message) {
+        var inArray = array.forEach(function (msg) {
+            if (JSON.stringify(msg.getJSONObject()) === JSON.stringify(message.getJSONObject())) {
+                return true;
+            }
+        });
+        if (!inArray) array.push(message);
+    };
     var sendMonitor = new $impl.Monitor(function () {
         var currentTime = Date.now();
         if (currentTime >= (startPooling + poolingInterval)) {
@@ -4827,22 +5876,47 @@ lib.device.util.MessageDispatcher = function (dcd) {
                 return;
             }
             var sent = false;
-            var message = queue.pop();
-            while (message !== null) {
-                sent = true;
-                var index = 0;
-                var messageArr = [];
-                while ((index < lib.oracle.iot.client.device.maximumMessagesPerConnection) && (message !== null)) {
-                    messageArr.push(message);
-                    message = queue.pop();
+            var message;
+            var waitMessageArray = [];
+            var sendMessageArray = [];
+            var errorMessageArray = [];
+            var inProgressSources = [];
+            while ((message = queue.pop()) !== null) {
+                var clientId = message._.internalObject.clientId;
+                var source = message._.internalObject.source;
+                if (self._.failMessageClientIdArray.indexOf(clientId) > -1) {
+                    if (errorMessageArray.indexOf(message) === -1) errorMessageArray.push(message);
+                    continue;
                 }
-                client._.send_receive_messages(messageArr, handleReceivedMessages, handleReceivedMessages);
-                message = queue.pop();
+                if (message._.internalObject.type === lib.message.Message.Type.REQUEST ||
+                    !(inProgressSources.indexOf(source) !== -1 ||
+                    self._.isContentDependent(clientId))) {
+                    pushMessage(sendMessageArray, message);
+                    if (sendMessageArray.length === lib.oracle.iot.client.device.maximumMessagesPerConnection) {
+                        break;
+                    }
+                } else {
+                    if (inProgressSources.indexOf(source) === -1) inProgressSources.push(source);
+                    pushMessage(waitMessageArray, message);
+                }
             }
-            if (!sent && !client._.receiver && lib.oracle.iot.client.device.disableLongPolling) {
+            sent = true;
+            var messageArr = [];
+            if (sendMessageArray.length > 0) {
+                messageArr = sendMessageArray;
+            }
+            waitMessageArray.forEach(function (message) {
+                self.queue(message);
+            });
+            client._.send_receive_messages(messageArr, handleReceivedMessages, handleReceivedMessages);
+
+            if (errorMessageArray.length > 0) {
+                errorCallback(errorMessageArray, new Error("Content sync failed"));
+            }
+            if (!sent && !client._.receiver && (lib.oracle.iot.client.device.disableLongPolling || client._.internalDev._.mqttController)) {
                 client._.send_receive_messages([], handleReceivedMessages, handleReceivedMessages);
             }
-            if (!client._.receiver && !lib.oracle.iot.client.device.disableLongPolling) {
+            if (!client._.receiver && !lib.oracle.iot.client.device.disableLongPolling && !client._.internalDev._.mqttController) {
                 var longPollCallback = null;
                 longPollCallback = function (messages, error) {
                     if (!error) {
@@ -4870,7 +5944,10 @@ lib.device.util.MessageDispatcher = function (dcd) {
                 totalMessagesReceived = totalMessagesReceived + 1;
                 totalBytesReceived = totalBytesReceived + _getUtf8BytesLength(JSON.stringify(message));
                 if (message.type === lib.message.Message.Type.REQUEST) {
-                    self.queue(self.getRequestDispatcher().dispatch(message));
+                    var responseMessage = self.getRequestDispatcher().dispatch(message);
+                    if (responseMessage) {
+                        self.queue(responseMessage);
+                    }
                 }
                 message = client._.get_received_message();
             }
@@ -4880,7 +5957,6 @@ lib.device.util.MessageDispatcher = function (dcd) {
     var resourceMessageMonitor = null;
 
     resourceMessageMonitor = new $impl.Monitor(function () {
-
         if (!dcd.isActivated()) {
             return;
         }
@@ -4926,7 +6002,6 @@ lib.device.util.MessageDispatcher = function (dcd) {
     startPooling = Date.now();
     sendMonitor.start();
     startTime = dcd._.internalDev._.getCurrentServerTime();
-
 };
 
 /**
@@ -4953,9 +6028,7 @@ lib.device.util.MessageDispatcher.prototype.getRequestDispatcher = function () {
  * @function queue
  */
 lib.device.util.MessageDispatcher.prototype.queue = function (message) {
-
     _mandatoryArg(message, lib.message.Message);
-
     this._.push(message);
 };
 
@@ -4980,7 +6053,7 @@ function _getMethodForRequestMessage(requestMessage){
 // file: library/device/RequestDispatcher.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -5003,7 +6076,6 @@ function _getMethodForRequestMessage(requestMessage){
  * @class
  */
 lib.device.util.RequestDispatcher = function () {
-
     if (lib.device.util.RequestDispatcher.prototype._singletonInstance) {
         return lib.device.util.RequestDispatcher.prototype._singletonInstance;
     }
@@ -5031,9 +6103,6 @@ lib.device.util.RequestDispatcher = function () {
             return lib.message.Message.buildResponseMessage(requestMessage, 404, {}, 'Not Found', '');
         }
     });
-
-
-
 };
 
 /**
@@ -5065,6 +6134,10 @@ lib.device.util.RequestDispatcher.prototype.dispatch = function (requestMessage)
         return this._.defaultHandler(requestMessage);
     }
     var message = this._.requestHandlers[requestMessage.destination][requestMessage.payload.url](requestMessage);
+    if (message && (message instanceof lib.message.Message)
+        && (message.getJSONObject().type === "RESPONSE_WAIT")) {
+        return null;
+    }
     if (!message || !(message instanceof lib.message.Message)
         || (message.getJSONObject().type !== lib.message.Message.Type.RESPONSE)) {
         return this._.defaultHandler(requestMessage);
@@ -5097,7 +6170,6 @@ lib.device.util.RequestDispatcher.prototype.dispatch = function (requestMessage)
  * @function registerRequestHandler
  */
 lib.device.util.RequestDispatcher.prototype.registerRequestHandler = function (endpointId, path, handler) {
-
     _mandatoryArg(endpointId, 'string');
     _mandatoryArg(path, 'string');
     _mandatoryArg(handler, 'function');
@@ -5123,7 +6195,6 @@ lib.device.util.RequestDispatcher.prototype.registerRequestHandler = function (e
  * @function getRequestHandler
  */
 lib.device.util.RequestDispatcher.prototype.getRequestHandler = function (endpointId, path) {
-
     _mandatoryArg(endpointId, 'string');
     _mandatoryArg(path, 'string');
 
@@ -5149,7 +6220,6 @@ lib.device.util.RequestDispatcher.prototype.getRequestHandler = function (endpoi
  * @function unregisterRequestHandler
  */
 lib.device.util.RequestDispatcher.prototype.unregisterRequestHandler = function (handler, endpointId, path) {
-
     if (handler && (typeof handler === 'string')) {
         endpointId = handler;
         path = endpointId;
@@ -5184,7 +6254,7 @@ lib.device.util.RequestDispatcher.prototype.unregisterRequestHandler = function 
 // file: library/device/Attribute.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -5211,11 +6281,13 @@ $impl.Attribute = function (attributeSpec) {
         description: (attributeSpec.description || ''),
         type: attributeSpec.type,
         writable: (attributeSpec.writable || false),
-        alias: (attributeSpec.alias || null)
+        alias: (attributeSpec.alias || null),
+        range: (attributeSpec.range ? _parseRange(attributeSpec.type, attributeSpec.range) : null),
+        defaultValue: ((typeof attributeSpec.defaultValue !== 'undefined') ? attributeSpec.defaultValue : null)
     };
 
-    if (attributeSpec.range) {
-        spec.range = _parseRange(spec.type, attributeSpec.range);
+    if (spec.type === "URI" && (typeof spec.defaultValue === "string")) {
+        spec.defaultValue = new lib.ExternalObject(spec.defaultValue);
     }
 
     /** @private */
@@ -5225,8 +6297,8 @@ $impl.Attribute = function (attributeSpec) {
         writable: false,
         value: {}
     });
-    this._.value = null;
-    this._.lastKnownValue = null;
+    this._.value = spec.defaultValue;
+    this._.lastKnownValue = spec.defaultValue;
     this._.lastUpdate = null;
 
     var self = this;
@@ -5234,21 +6306,15 @@ $impl.Attribute = function (attributeSpec) {
     //@TODO: see comment in AbstractVirtualDevice; this is not clean especially it is supposed to be a private function and yet used in 4 other objects ...etc...; this looks like a required ((semi-)public) API ... or an $impl.XXX or a function ()...
 
     /** @private */
-    Object.defineProperty(this._, 'remoteUpdate', {
+    Object.defineProperty(this._, 'isValidValue', {
         enumerable: false,
         configurable: false,
         writable: false,
-        value: function (newValue, onlyValidation) {
-
+        value: function (newValue) {
             try {
                 newValue = _checkAndGetNewValue(newValue, spec);
             } catch (e) {
                 lib.createError('invalid value', e);
-                return false;
-            }
-
-            if (!spec.writable) {
-                lib.createError('trying to set a read only value');
                 return false;
             }
 
@@ -5261,22 +6327,58 @@ $impl.Attribute = function (attributeSpec) {
                 lib.createError('trying to set a value out of range [' + spec.range.low + ' - ' + spec.range.high + ']');
                 return false;
             }
-
-            if (!onlyValidation) {
-
-                self._.lastUpdate = Date.now();
-
-                if (_equal(newValue, self._.lastKnownValue, spec)) {
-                    return true;
-                }
-
-                self._.lastKnownValue = newValue;
-
-                lib.log('updating attribute "' + spec.name + '" of type "' + spec.type + '" from ' + self._.value + ' to ' + newValue);
-                self._.value = newValue;
-
-            }
             return true;
+        }
+    });
+
+    /** @private */
+    Object.defineProperty(this._, 'remoteUpdate', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function (newValue) {
+            try {
+                if (self._.isValidValue(newValue)) {
+                    if (!spec.writable) {
+                        lib.createError('trying to set a read only value');
+                        return false;
+                    }
+                    self._.lastUpdate = Date.now();
+
+                    if (_equal(newValue, self._.lastKnownValue, spec)) {
+                        return;
+                    }
+
+                    self._.lastKnownValue = newValue;
+
+                    var consoleValue = (self._.value instanceof lib.ExternalObject)? self._.value.getURI() : self._.value;
+                    var consoleNewValue = (newValue instanceof lib.ExternalObject)? newValue.getURI() : newValue;
+                    lib.log('updating attribute "' + spec.name + '" of type "' + spec.type + '" from ' + consoleValue + ' to ' + consoleNewValue);
+                    self._.value = newValue;
+                }
+            } catch (e) {
+                lib.createError('invalid value ', e);
+            }
+        }
+    });
+
+    /** @private */
+    Object.defineProperty(this._, 'getNewValue', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function (newValue, virtualDevice, callback) {
+            try {
+                if (self._.isValidValue(newValue)) {
+                    _checkAndGetNewValueCallback(newValue, spec, virtualDevice, function(attributeValue, isSync) {
+                        if (callback) {
+                            callback(attributeValue, isSync);
+                        }
+                    });
+                }
+            } catch (e) {
+                lib.createError('invalid value: ', e);
+            }
         }
     });
 
@@ -5287,7 +6389,10 @@ $impl.Attribute = function (attributeSpec) {
         writable: false,
         value: function (error) {
             if (error) {
-                lib.log('updating attribute "' + spec.name + '" of type "' + spec.type + '" from ' + self._.value + ' to ' + self._.lastKnownValue);
+                var consoleValue = (self._.value instanceof lib.ExternalObject)? self._.value.getURI() : self._.value;
+                var consoleLastKnownValue = (self._.lastKnownValue instanceof lib.ExternalObject)?
+                    self._.lastKnownValue.getURI() : self._.lastKnownValue;
+                lib.log('updating attribute "' + spec.name + '" of type "' + spec.type + '" from ' + consoleValue + ' to ' + consoleLastKnownValue);
                 self._.value = self._.lastKnownValue;
             } else {
                 self._.lastKnownValue = self._.value;
@@ -5302,37 +6407,32 @@ $impl.Attribute = function (attributeSpec) {
         configurable: false,
         writable: false,
         value: function (newValue, nosync) {
+            if (self._.isValidValue(newValue)) {
+                newValue = _checkAndGetNewValue(newValue, spec);
 
-            newValue = _checkAndGetNewValue(newValue, spec);
-
-            if (typeof newValue === 'undefined') {
-                lib.error('trying to set an invalid value');
-                return;
-            }
-
-            if (spec.range && ((newValue < spec.range.low) || (newValue > spec.range.high))) {
-                lib.error('trying to set a value out of range [' + spec.range.low + ' - ' + spec.range.high + ']');
-                return;
-            }
-
-            if (_equal(newValue, self._.value, spec)) {
-                return;
-            }
-
-            lib.log('updating attribute "' + spec.name + '" of type "' + spec.type + '" from ' + self._.value + ' to ' + newValue);
-            self._.value = newValue;
-
-            if (!nosync) {
-                var attributes = {};
-                attributes[spec.name] = newValue;
-                if (!self.device || !(self.device instanceof lib.device.VirtualDevice)) {
+                if (_equal(newValue, self._.value, spec)) {
                     return;
                 }
-                self.device._.updateAttributes(attributes);
+
+                var consoleValue = (self._.value instanceof lib.ExternalObject) ? self._.value.getURI() : self._.value;
+                var consoleNewValue = (newValue instanceof lib.ExternalObject) ? newValue.getURI() : newValue;
+                lib.log('updating attribute "' + spec.name + '" of type "' + spec.type + '" from ' + consoleValue + ' to ' + consoleNewValue);
+                self._.value = newValue;
+                self._.lastKnownValue = newValue;
+
+                if (!nosync) {
+                    var attributes = {};
+                    attributes[spec.name] = newValue;
+                    if (!self.device || !(self.device instanceof lib.device.VirtualDevice)) {
+                        return;
+                    }
+                    self.device._.updateAttributes(attributes);
+                }
+            } else {
+                lib.error('invalid value');
             }
         }
     });
-
 
     // public properties
 
@@ -5371,6 +6471,13 @@ $impl.Attribute = function (attributeSpec) {
         configurable: false,
         writable: false,
         value: spec.type
+    });
+
+    Object.defineProperty(this, 'defaultValue', {
+        enumerable: true,
+        configurable: false,
+        writable: false,
+        value: spec.defaultValue
     });
 
     /**
@@ -5459,7 +6566,6 @@ $impl.Attribute = function (attributeSpec) {
             return this._.lastKnownValue;
         },
         set: function (newValue) {
-            return;
         }
     });
 
@@ -5474,7 +6580,6 @@ $impl.Attribute = function (attributeSpec) {
             return this._.lastUpdate;
         },
         set: function (newValue) {
-            return;
         }
     });
 };
@@ -5513,6 +6618,8 @@ function _matchType(reqType, value) {
             return (typeof value === 'boolean');
         case 'DATETIME':
             return (value instanceof Date);
+        case 'URI':
+            return (value instanceof lib.ExternalObject) || (typeof value === 'string');
         default:
             lib.error('illegal state');
             return;
@@ -5542,6 +6649,66 @@ function _checkAndGetNewValue(newValue, spec) {
 }
 
 /** @ignore */
+function _checkAndGetNewValueCallback(newValue, spec, virtualDevice, callback) {
+    var isURICallback = false;
+    if (spec.type === 'DATETIME') {
+        if (typeof newValue === 'number') {
+            var str = '' + newValue;
+            if (str.match(/^[-+]?[1-9]\.[0-9]+e[-]?[1-9][0-9]*$/)) {
+                newValue = newValue.toFixed();
+            }
+        }
+        newValue = new Date(newValue);
+        if (isNaN(newValue.getTime())) {
+            lib.error('invalid date in date time parameter');
+            return;
+        }
+    }
+    if (spec.type === 'URI') {
+        if (newValue instanceof lib.ExternalObject) {
+            // nothing to do
+        } else if (typeof newValue === 'string') {
+            // get uri from server
+            if (_isStorageCloudURI(newValue)) {
+                isURICallback = true;
+                virtualDevice.client._.internalDev.createStorageObject(newValue, function (storage, error) {
+                    if (error) {
+                        lib.error('Error during creation storage object: ' + error);
+                        return;
+                    }
+
+                    var storageObject = new lib.device.StorageObject(storage.getURI(), storage.getName(),
+                        storage.getType(), storage.getEncoding(), storage.getDate(), storage.getLength());
+                    storageObject._.setDevice(virtualDevice.client._.internalDev);
+                    storageObject._.setSyncEventInfo(spec.name, virtualDevice);
+
+                    if (!_matchType(spec.type, storageObject)) {
+                        lib.error('type mismatch; attribute "' + spec.name + '" has type [' + spec.type + ']');
+                        return;
+                    }
+                    callback(storageObject);
+                });
+                return;
+            } else {
+                newValue = new lib.ExternalObject(newValue);
+            }
+        } else {
+            lib.error('invalid URI parameter');
+            return;
+        }
+    }
+
+    if (!_matchType(spec.type, newValue)) {
+        lib.error('type mismatch; attribute "' + spec.name + '" has type [' + spec.type + ']');
+        return;
+    }
+
+    if (!isURICallback) {
+        callback(newValue, true);
+    }
+}
+
+/** @ignore */
 function _equal(newValue, oldValue, spec) {
     if (spec.type === 'DATETIME'
         && (newValue instanceof Date)
@@ -5557,7 +6724,7 @@ function _equal(newValue, oldValue, spec) {
 // file: library/device/Action.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -5583,12 +6750,9 @@ $impl.Action = function (actionSpec) {
         name: actionSpec.name,
         description: (actionSpec.description || ''),
         argType: (actionSpec.argType || null),
-        alias: (actionSpec.alias || null)
+        alias: (actionSpec.alias || null),
+        range: (actionSpec.range ? _parseRange(actionSpec.argType, actionSpec.range) : null)
     };
-
-    if (actionSpec.range) {
-        spec.range = _parseRange(spec.argType, actionSpec.range);
-    }
 
     /** @private */
     Object.defineProperty(this, '_', {
@@ -5644,27 +6808,65 @@ $impl.Action = function (actionSpec) {
     this._.onExecute = null;
 
     /** @private */
-    this.checkVarArg = function (arg) {
+    this.checkAndGetVarArg = function (arg, virtualDevice, callback) {
+        var isURICallback = false;
         if (!spec.argType) {
             if (typeof arg !== 'undefined') {
-                lib.createError('invalid number of arguments');
-                return false;
+                lib.error('invalid number of arguments');
+                return;
             }
         } else {
             if (typeof arg === 'undefined') {
-                lib.createError('invalid number of arguments');
-                return false;
+                lib.error('invalid number of arguments');
+                return;
             }
+
+            if (spec.argType === 'URI') {
+                if (arg instanceof lib.ExternalObject) {
+                    arg = arg.getURI();
+                } else if (typeof arg === 'string') {
+                    // get uri from server
+                    if (_isStorageCloudURI(arg)) {
+                        isURICallback = true;
+                        virtualDevice.client._.internalDev.createStorageObject(arg, function (storage, error) {
+                            if (error) {
+                                lib.error('Error during creation storage object: ' + error);
+                                return;
+                            }
+
+                            var storageObject = new lib.device.StorageObject(storage.getURI(), storage.getName(),
+                                storage.getType(), storage.getEncoding(), storage.getDate(), storage.getLength());
+                            storageObject._.setDevice(virtualDevice.client._.internalDev);
+                            storageObject._.setSyncEventInfo(spec.name, virtualDevice);
+
+                            if (!_matchType(spec.argType, storageObject)) {
+                                lib.error('type mismatch; action "'+spec.name+'" requires arg type [' + spec.argType + ']');
+                                return;
+                            }
+                            callback(storageObject);
+                        });
+                        return;
+                    } else {
+                        arg = new lib.ExternalObject(arg);
+                    }
+                } else {
+                    lib.error('invalid URI parameter');
+                    return;
+                }
+            }
+
             if (!_matchType(spec.argType, arg)) {
-                lib.createError('type mismatch; action "'+spec.name+'" requires arg type [' + spec.argType + ']');
-                return false;
+                lib.error('type mismatch; action "'+spec.name+'" requires arg type [' + spec.argType + ']');
+                return;
             }
             if (spec.range && ((arg<spec.range.low) || (arg>spec.range.high))) {
-                lib.createError('trying to use an argument which is out of range ['+spec.range.low+' - '+spec.range.high+']');
-                return false;
+                lib.error('trying to use an argument which is out of range ['+spec.range.low+' - '+spec.range.high+']');
+                return;
             }
         }
-        return true;
+        if (!isURICallback) {
+            callback(arg, true);
+        }
     };
 };
 
@@ -5673,7 +6875,7 @@ $impl.Action = function (actionSpec) {
 // file: library/device/Alert.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -5725,7 +6927,6 @@ lib.device.Alert = function (virtualDevice, formatUrn) {
         name: (alertSpec.name || null)
     };
 
-
     if (alertSpec.value && alertSpec.value.fields && Array.isArray(alertSpec.value.fields)) {
 
         Object.defineProperty(this, 'fields', {
@@ -5735,6 +6936,7 @@ lib.device.Alert = function (virtualDevice, formatUrn) {
             value: {}
         });
 
+        /** @private */
         Object.defineProperty(this, '_', {
             enumerable: false,
             configurable: false,
@@ -5745,7 +6947,6 @@ lib.device.Alert = function (virtualDevice, formatUrn) {
         var self = this;
 
         alertSpec.value.fields.forEach(function (field) {
-
             self._[field.name] = {};
             self._[field.name].type = field.type.toUpperCase();
             self._[field.name].optional = field.optional;
@@ -5774,7 +6975,6 @@ lib.device.Alert = function (virtualDevice, formatUrn) {
                     self._[field.name].value = newValue;
                 }
             });
-
         });
     }
 
@@ -5800,7 +7000,6 @@ lib.device.Alert = function (virtualDevice, formatUrn) {
         writable: false,
         value: spec.description
     });
-
 };
 
 /**
@@ -5821,6 +7020,8 @@ lib.device.Alert = function (virtualDevice, formatUrn) {
 lib.device.Alert.prototype.raise = function () {
     var message = lib.message.Message.AlertMessage.buildAlertMessage(this.urn, this.description, lib.message.Message.AlertMessage.Severity.SIGNIFICANT);
     message.source(this.device.getEndpointId());
+    var messageDispatcher = new lib.device.util.MessageDispatcher(this.device.client._.internalDev);
+    var storageObjects = [];
     for (var key in this._) {
         var field = this._[key];
         if (!field.optional && ((typeof field.value === 'undefined') || (field.value === null))) {
@@ -5828,10 +7029,23 @@ lib.device.Alert.prototype.raise = function () {
             return;
         }
         if ((typeof field.value !== 'undefined') && (field.value !== null)) {
+            if ((field.type === "URI") && (field.value instanceof lib.StorageObject)) {
+                var syncStatus = field.value.getSyncStatus();
+                if (syncStatus === lib.device.StorageObject.SyncStatus.NOT_IN_SYNC ||
+                    syncStatus === lib.device.StorageObject.SyncStatus.SYNC_PENDING) {
+                    storageObjects.push(field.value);
+                }
+                field.value._.setSyncEventInfo(key, this.device);
+                field.value.sync();
+            }
             message.dataItem(key, field.value);
         }
     }
-    new lib.device.util.MessageDispatcher(this.device.client._.internalDev).queue(message);
+
+    storageObjects.forEach(function (storageObject) {
+        messageDispatcher._.addStorageDependency(storageObject, message._.internalObject.clientId);
+    });
+    messageDispatcher.queue(message);
     for (var key1 in this._) {
         this._[key1].value = null;
     }
@@ -5842,7 +7056,7 @@ lib.device.Alert.prototype.raise = function () {
 // file: library/device/Data.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -5894,9 +7108,7 @@ lib.device.Data = function (virtualDevice, formatUrn) {
         name: (dataSpec.name || null)
     };
 
-
     if (dataSpec.value && dataSpec.value.fields && Array.isArray(dataSpec.value.fields)) {
-
         Object.defineProperty(this, 'fields', {
             enumerable: true,
             configurable: false,
@@ -5914,7 +7126,6 @@ lib.device.Data = function (virtualDevice, formatUrn) {
         var self = this;
 
         dataSpec.value.fields.forEach(function (field) {
-
             self._[field.name] = {};
             self._[field.name].type = field.type.toUpperCase();
             self._[field.name].optional = field.optional;
@@ -5948,7 +7159,6 @@ lib.device.Data = function (virtualDevice, formatUrn) {
     }
 
     // public members
-
     Object.defineProperty(this, 'urn', {
         enumerable: true,
         configurable: false,
@@ -5969,7 +7179,6 @@ lib.device.Data = function (virtualDevice, formatUrn) {
         writable: false,
         value: spec.description
     });
-
 };
 
 /**
@@ -5987,13 +7196,14 @@ lib.device.Data = function (virtualDevice, formatUrn) {
  * @function submit
  */
 lib.device.Data.prototype.submit = function () {
-
     var message = new lib.message.Message();
     message
         .type(lib.message.Message.Type.DATA)
         .source(this.device.getEndpointId())
         .format(this.urn);
 
+    var messageDispatcher = new lib.device.util.MessageDispatcher(this.device.client._.internalDev);
+    var storageObjects = [];
     for (var key in this._) {
         var field = this._[key];
         if (!field.optional && ((typeof field.value === 'undefined') || (field.value === null))) {
@@ -6001,15 +7211,26 @@ lib.device.Data.prototype.submit = function () {
             return;
         }
         if ((typeof field.value !== 'undefined') && (field.value !== null)) {
+            if ((field.type === "URI") && (field.value instanceof lib.StorageObject)) {
+                var syncStatus = field.value.getSyncStatus();
+                if (syncStatus === lib.device.StorageObject.SyncStatus.NOT_IN_SYNC ||
+                    syncStatus === lib.device.StorageObject.SyncStatus.SYNC_PENDING) {
+                    storageObjects.push(field.value);
+                }
+                field.value._.setSyncEventInfo(key, this.device);
+                field.value.sync();
+            }
             message.dataItem(key, field.value);
         }
     }
 
-    new lib.device.util.MessageDispatcher(this.device.client._.internalDev).queue(message);
+    storageObjects.forEach(function (storageObject) {
+        messageDispatcher._.addStorageDependency(storageObject, message._.internalObject.clientId);
+    });
+    messageDispatcher.queue(message);
     for (var key1 in this._) {
         this._[key1].value = null;
     }
-
 };
 
 
@@ -6017,7 +7238,7 @@ lib.device.Data.prototype.submit = function () {
 // file: library/device/DirectlyConnectedDevice.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -6038,7 +7259,7 @@ lib.device.Data.prototype.submit = function () {
  * and authentication is retrieved from a TrustedAssetsStore generated
  * using the TrustedAssetsProvisioner tool using the Default TrustedAssetsManager.
  * <p>
- * This object represents the high level API for the directly-connected device
+ * This object represents the Virtualization API for the directly-connected device
  * and uses the MessageDispatcher for sending/receiving messages.
  * Also it implements the message dispatcher, diagnostics and connectivity test
  * capabilities. Also it can be used for creating virtual devices.
@@ -6051,6 +7272,7 @@ lib.device.Data.prototype.submit = function () {
  * to be used for trusted assets manager creation. This is optional.
  * If none is given the default global library parameter is used:
  * lib.oracle.iot.tam.storePassword
+ * @param {boolean} [gateway] - indicate creation of a GatewayDevice representation
  *
  * @see {@link iotcs.device.util.MessageDispatcher}
  * @memberOf iotcs.device
@@ -6114,7 +7336,6 @@ lib.device.DirectlyConnectedDevice = function (taStoreFile, taStorePassword, gat
     });
 
     var messageResponseHandler = function (messages, exception) {
-
         var deviceMap = {};
 
         messages.forEach(function (messageObj) {
@@ -6204,13 +7425,54 @@ lib.device.DirectlyConnectedDevice = function (taStoreFile, taStorePassword, gat
                 }
             }
         }
-
     };
 
+    var storageHandler = function (progress, error) {
+        var storage = progress.getStorageObject();
+        if (error) {
+            if (storage._.deviceForSync && storage._.deviceForSync.onError) {
+                var tryValues = {};
+                tryValues[storage._.nameForSyncEvent] = storage.getURI();
+                var onDeviceErrorTuple = {
+                    newValues: tryValues,
+                    tryValues: tryValues,
+                    errorResponse: error
+                };
+                storage._.deviceForSync.onError(onDeviceErrorTuple);
+            }
+            return;
+        }
+        if (storage) {
+            var state = progress.getState();
+            var oldSyncStatus = storage.getSyncStatus();
+            switch (state) {
+                case lib.StorageDispatcher.Progress.State.COMPLETED:
+                    storage._.internal.syncStatus = lib.device.StorageObject.SyncStatus.IN_SYNC;
+                    break;
+                case lib.StorageDispatcher.Progress.State.CANCELLED:
+                case lib.StorageDispatcher.Progress.State.FAILED:
+                    storage._.internal.syncStatus = lib.device.StorageObject.SyncStatus.SYNC_FAILED;
+                    break;
+                case lib.StorageDispatcher.Progress.State.IN_PROGRESS:
+                case lib.StorageDispatcher.Progress.State.INITIATED:
+                case lib.StorageDispatcher.Progress.State.QUEUED:
+                    // do nothing
+            }
+            if (oldSyncStatus !== storage.getSyncStatus()) {
+                storage._.handleStateChange();
+                if (storage._.onSync) {
+                    var syncEvent;
+                    while ((syncEvent = storage._.internal.syncEvents.pop()) !== null) {
+                        storage._.onSync(syncEvent);
+                    }
+                }
+            }
+        }
+    };
     new lib.device.util.MessageDispatcher(this._.internalDev).onError = messageResponseHandler;
     new lib.device.util.MessageDispatcher(this._.internalDev).onDelivery = messageResponseHandler;
 
-
+    new lib.device.util.StorageDispatcher(this._.internalDev).onProgress = storageHandler;
 };
 
 lib.device.DirectlyConnectedDevice.prototype = Object.create(lib.Client.prototype);
@@ -6243,7 +7505,6 @@ lib.device.DirectlyConnectedDevice.constructor = lib.device.DirectlyConnectedDev
  * @function activate
  */
 lib.device.DirectlyConnectedDevice.prototype.activate = function (deviceModelUrns, callback) {
-
     if (this.isActivated()) {
         lib.error('cannot activate an already activated device');
         return;
@@ -6352,7 +7613,7 @@ lib.device.DirectlyConnectedDevice.prototype.close = function () {
 // file: library/device/GatewayDevice.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and 
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -6361,9 +7622,9 @@ lib.device.DirectlyConnectedDevice.prototype.close = function () {
  */
 
 /**
- * This represents a GatewayDevice in the high level API.
+ * This represents a GatewayDevice in the Virtualization API.
  * It has the exact same specifications and capabilities as
- * a directly connected device from the high level API and additionally
+ * a directly connected device from the Virtualization API and additionally
  * it has the capability to register indirectly connected devices.
  *
  * @param {string} [taStoreFile] - trusted assets store file path
@@ -6410,30 +7671,54 @@ lib.device.GatewayDevice.DeviceMetadata = {
 };
 
 /**
- * Register an indirectly-connected device with the cloud
- * service. An indirectly-connected device only needs to be
- * registered once. After registering the indirectly-connected
- * device, the caller is responsible for keeping track of what
- * devices have been registered, the metadata, and for
- * persisting the endpoint id. On subsequent boots, the same
- * endpoint id is to be used for the indirectly-connected
- * device. Registering an indirectly-connected device that has
- * already been registered will result in an error given by the
- * server.
- * <p>
- * The hardwareId is a unique identifier within the Cloud
- * Service instance. The metadata argument should typically contain all the standard
- * metadata (the constants documented in This object) along
- * with any other vendor defined metadata.
- * <p>
- * Standard metadata properties can be taken from the
- * DeviceMetadata enumeration, part of this object.
+ * Register an indirectly-connected device with the cloud service and specify whether
+ * the gateway device is required to have the appropriate credentials for activating
+ * the indirectly-connected device.
  *
- * @param {string} hardwareid - an identifier unique within
- * the Cloud Service instance 
- * @param {Object} metadata - the metadata of the device
- * @param {string[]} deviceModelUrns - array of device model
- * URNs supported by the indirectly connected device
+ * The <code>restricted</code> parameter controls whether or not the client
+ * library is <em>required</em> to supply credentials for activating
+ * the indirectly-connected device. The client library will
+ * <em>always</em> supply credentials for an indirectly-connected
+ * device whose trusted assets have been provisioned to the client.
+ * If, however, the trusted assets of the indirectly-connected device
+ * have not been provisioned to the client, the client library can
+ * create credentials that attempt to restrict the indirectly connected
+ * device to this gateway device.
+ *
+ * The <code>restricted</code> parameter could be omitted. This is the equivalent of calling
+ * <code>iotcs.device.util.GatewayDevice.registerDevice(false, hardwareId, metaData, deviceModels, callback)</code>.
+ *
+ * Pass <code>true</code> for the <code>restricted</code> parameter
+ * to ensure the indirectly-connected device cannot be activated
+ * by this gateway device without presenting credentials. If <code>restricted</code>
+ * is <code>true</code>, the client library will provide credentials to the server.
+ * The server will reject the activation request if the indirectly connected
+ * device is not allowed to roam to this gateway device.
+ *
+ * Pass <code>false</code> to allow the indirectly-connected device to be activated
+ * without presenting credentials if the trusted assets of the
+ * indirectly-connected device have not been provisioned to the client.
+ * If <code>restricted</code> is <code>false</code>, the client library will provide
+ * credentials if, and only if, the credentials have been provisioned to the
+ * client. The server will reject the activation if credentials are required
+ * but not supplied, or if the provisioned credentials do not allow the
+ * indirectly connected device to roam to this gateway device.
+ *
+ * The <code>hardwareId</code> is a unique identifier within the cloud service
+ * instance and may not be <code>null</code>. If one is not present for the device,
+ * it should be generated based on other metadata such as: model, manufacturer,
+ * serial number, etc.
+ *
+ * The <code>metaData</code> Object should typically contain all the standard
+ * metadata (the constants documented in this class) along with any other
+ * vendor defined metadata.
+ *
+ * @param {boolean} [restricted] - indicate whether or not credentials are required
+ * for activating the indirectly connected device
+ * @param {!string} hardwareId - an identifier unique within the Cloud Service instance
+ * @param {Object} metaData - The metadata of the device
+ * @param {string[]} deviceModelUrns - array of device model URNs
+ * supported by the indirectly connected device
  * @param {function(Object)} callback - the callback function. This
  * function is called with the following argument: the endpoint id
  * of the indirectly-connected device is the registration was successful
@@ -6446,8 +7731,15 @@ lib.device.GatewayDevice.DeviceMetadata = {
  * @memberof iotcs.device.GatewayDevice.prototype
  * @function registerDevice
  */
-lib.device.GatewayDevice.prototype.registerDevice = function (hardwareid, metadata, deviceModelUrns, callback) {
-    this._.internalDev.registerDevice(hardwareid, metadata, deviceModelUrns, callback);
+lib.device.GatewayDevice.prototype.registerDevice = function (restricted, hardwareId, metaData, deviceModelUrns, callback) {
+    if (arguments.length == 4) {
+        hardwareId = arguments[0];
+        metaData = arguments[1];
+        deviceModelUrns = arguments[2];
+        callback = arguments[3];
+        restricted = false;
+    }
+    this._.internalDev.registerDevice(restricted, hardwareId, metaData, deviceModelUrns, callback);
 };
 
 
@@ -6455,7 +7747,7 @@ lib.device.GatewayDevice.prototype.registerDevice = function (hardwareid, metada
 // file: library/device/VirtualDevice.js
 
 /**
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  *
  * This software is dual-licensed to you under the MIT License (MIT) and
  * the Universal Permissive License (UPL). See the LICENSE file in the root
@@ -6589,35 +7881,47 @@ lib.device.VirtualDevice = function (endpointId, deviceModel, client) {
             try {
                 var attribute = self.attributes[urlAttribute];
                 var data = null;
+                var isDone = false;
                 try {
                     data = JSON.parse($port.util.atob(requestMessage.payload.body));
                 } catch (e) {
                     return lib.message.Message.buildResponseMessage(requestMessage, 400, {}, 'Bad Request', '');
                 }
                 var oldValue = attribute.value;
-                if (!data || (typeof data.value === 'undefined') || !attribute._.remoteUpdate(data.value, true)) {
+                if (!data || (typeof data.value === 'undefined') || !attribute._.isValidValue(data.value)) {
                     return lib.message.Message.buildResponseMessage(requestMessage, 400, {}, 'Bad Request', '');
                 }
-                var onChangeTuple = {
-                    attribute: attribute,
-                    newValue: data.value,
-                    oldValue: oldValue
-                };
-                if (attribute.onChange) {
-                    attribute.onChange(onChangeTuple);
+                attribute._.getNewValue(data.value, self, function(attributeValue, isSync) {
+                    var onChangeTuple = {
+                        attribute: attribute,
+                        newValue: attributeValue,
+                        oldValue: oldValue
+                    };
+                    if (attribute.onChange) {
+                        attribute.onChange(onChangeTuple);
+                    }
+                    if (self.onChange) {
+                        self.onChange([onChangeTuple]);
+                    }
+                    attribute._.remoteUpdate(attributeValue);
+                    var message = new lib.message.Message();
+                    message
+                        .type(lib.message.Message.Type.DATA)
+                        .source(self.getEndpointId())
+                        .format(self.model.urn+":attributes");
+                    message.dataItem(urlAttribute, attributeValue);
+                    messageDispatcher.queue(message);
+                    if (isSync) {
+                        isDone = true;
+                    } else {
+                        messageDispatcher.queue(lib.message.Message.buildResponseMessage(requestMessage, 200, {}, 'OK', ''));
+                    }
+                });
+                if (isDone) {
+                    return lib.message.Message.buildResponseMessage(requestMessage, 200, {}, 'OK', '');
+                } else {
+                    return lib.message.Message.buildResponseWaitMessage();
                 }
-                if (self.onChange) {
-                    self.onChange([onChangeTuple]);
-                }
-                var message = new lib.message.Message();
-                message
-                    .type(lib.message.Message.Type.DATA)
-                    .source(self.getEndpointId())
-                    .format(self.model.urn+":attributes");
-                attribute._.remoteUpdate(data.value, false);
-                message.dataItem(urlAttribute, data.value);
-                messageDispatcher.queue(message);
-                return lib.message.Message.buildResponseMessage(requestMessage, 200, {}, 'OK', '');
             } catch (e) {
                 return lib.message.Message.buildResponseMessage(requestMessage, 400, {}, 'Bad Request', '');
             }
@@ -6651,16 +7955,30 @@ lib.device.VirtualDevice = function (endpointId, deviceModel, client) {
             try {
                 var action = self.actions[urlAction];
                 var data = null;
+                var isDone = false;
                 try {
                     data = JSON.parse($port.util.atob(requestMessage.payload.body));
                 } catch (e) {
                     return lib.message.Message.buildResponseMessage(requestMessage, 400, {}, 'Bad Request', '');
                 }
-                if (!data || !action.checkVarArg(data.value)) {
+
+                if (!data) {
                     return lib.message.Message.buildResponseMessage(requestMessage, 400, {}, 'Bad Request', '');
                 }
-                action.onExecute(data.value);
-                return lib.message.Message.buildResponseMessage(requestMessage, 200, {}, 'OK', '');
+
+                action.checkAndGetVarArg(data.value, self, function (actionValue, isSync) {
+                    action.onExecute(actionValue);
+                    if (isSync) {
+                        isDone = true;
+                    } else {
+                        messageDispatcher.queue(lib.message.Message.buildResponseMessage(requestMessage, 200, {}, 'OK', ''));
+                    }
+                });
+                if (isDone) {
+                    return lib.message.Message.buildResponseMessage(requestMessage, 200, {}, 'OK', '');
+                } else {
+                    return lib.message.Message.buildResponseWaitMessage();
+                }
             } catch (e) {
                 return lib.message.Message.buildResponseMessage(requestMessage, 500, {}, 'Internal Server Error', '');
             }
@@ -6681,7 +7999,6 @@ lib.device.VirtualDevice = function (endpointId, deviceModel, client) {
     }
 
     if (this.model.formats) {
-
         this.alerts = this;
         this.dataFormats = this;
         this.model.formats.forEach(function (format) {
@@ -6694,7 +8011,6 @@ lib.device.VirtualDevice = function (endpointId, deviceModel, client) {
                 }
             }
         });
-
     }
 
     Object.defineProperty(this, '_',{
@@ -6703,7 +8019,6 @@ lib.device.VirtualDevice = function (endpointId, deviceModel, client) {
         writable: false,
         value: {}
     });
-
 
     Object.defineProperty(this._, 'updateAttributes', {
         enumerable: false,
@@ -6716,9 +8031,19 @@ lib.device.VirtualDevice = function (endpointId, deviceModel, client) {
                 .source(self.getEndpointId())
                 .format(self.model.urn+":attributes");
 
+            var storageObjects = [];
             for (var attribute in attributes) {
                 var value = attributes[attribute];
                 if (attribute in self.attributes) {
+                    if (value instanceof lib.StorageObject) {
+                        var syncStatus = value.getSyncStatus();
+                        if (syncStatus === lib.device.StorageObject.SyncStatus.NOT_IN_SYNC ||
+                            syncStatus === lib.device.StorageObject.SyncStatus.SYNC_PENDING) {
+                            storageObjects.push(value);
+                        }
+                        value._.setSyncEventInfo(attribute, self);
+                        value.sync();
+                    }
                     message.dataItem(attribute,value);
                 } else {
                     lib.error('unknown attribute "'+attribute+'"');
@@ -6726,7 +8051,19 @@ lib.device.VirtualDevice = function (endpointId, deviceModel, client) {
                 }
             }
 
+            storageObjects.forEach(function (storageObject) {
+                messageDispatcher._.addStorageDependency(storageObject, message._.internalObject.clientId);
+            });
             messageDispatcher.queue(message);
+        }
+    });
+
+    Object.defineProperty(this._, 'handleStorageObjectStateChange', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function (storage) {
+            messageDispatcher._.removeStorageDependency(storage);
         }
     });
 
@@ -6735,7 +8072,7 @@ lib.device.VirtualDevice = function (endpointId, deviceModel, client) {
         if (!method || (method !== 'PATCH')) {
             return lib.message.Message.buildResponseMessage(requestMessage, 405, {}, 'Method Not Allowed', '');
         }
-        if (self.onChange){
+        if (self.onChange) {
             try {
                 var data = null;
                 try {
@@ -6747,38 +8084,63 @@ lib.device.VirtualDevice = function (endpointId, deviceModel, client) {
                     return lib.message.Message.buildResponseMessage(requestMessage, 400, {}, 'Bad Request', '');
                 }
                 var tupleArray = [];
-                for (var attributeName in data) {
+                var index = 0;
+                var isDoneForEach = new Array(Object.keys(data).length);
+                isDoneForEach.fill(false);
+                Object.keys(data).forEach(function(attributeName) {
                     var attribute = self.attributes[attributeName];
                     if (!attribute) {
                         return lib.message.Message.buildResponseMessage(requestMessage, 400, {}, 'Bad Request', '');
                     }
                     var oldValue = attribute.value;
-                    if (!attribute._.remoteUpdate(data[attributeName], true)) {
+                    if (!attribute._.isValidValue(data[attributeName])) {
                         return lib.message.Message.buildResponseMessage(requestMessage, 400, {}, 'Bad Request', '');
                     }
-                    var onChangeTuple = {
-                        attribute: attribute,
-                        newValue: data[attributeName],
-                        oldValue: oldValue
-                    };
-                    if (attribute.onChange) {
-                        attribute.onChange(onChangeTuple);
-                    }
-                    tupleArray.push(onChangeTuple);
+
+                    attribute._.getNewValue(data[attributeName], self, function (attributeValue, isSync) {
+                        var onChangeTuple = {
+                            attribute: attribute,
+                            newValue: attributeValue,
+                            oldValue: oldValue
+                        };
+                        if (attribute.onChange) {
+                            attribute.onChange(onChangeTuple);
+                        }
+                        tupleArray.push(onChangeTuple);
+                        if (isSync) {
+                            isDoneForEach[index] = true;
+                        }
+                        if (++index === Object.keys(data).length) {
+                            // run after last attribute handle
+                            self.onChange(tupleArray);
+
+                            var message = new lib.message.Message();
+                            message
+                                .type(lib.message.Message.Type.DATA)
+                                .source(self.getEndpointId())
+                                .format(self.model.urn+":attributes");
+                            Object.keys(data).forEach(function (attributeName1) {
+                                var attribute1 = self.attributes[attributeName1];
+                                var attributeValue1 = tupleArray.filter(function(tuple) {
+                                    return tuple.attribute === attribute1;
+                                }, attribute1)[0].newValue;
+                                attribute1._.remoteUpdate(attributeValue1);
+                                message.dataItem(attributeName1, attributeValue1);
+                            });
+                            messageDispatcher.queue(message);
+                            // one of async attribute handle will be the last
+                            // check if at least one async attribute handle was called
+                            if (isDoneForEach.indexOf(false) !== -1) {
+                                messageDispatcher.queue(lib.message.Message.buildResponseMessage(requestMessage, 200, {}, 'OK', ''));
+                            }
+                        }
+                    });
+                });
+                if (isDoneForEach.indexOf(false) === -1) {
+                    return lib.message.Message.buildResponseMessage(requestMessage, 200, {}, 'OK', '');
+                } else {
+                    return lib.message.Message.buildResponseWaitMessage();
                 }
-                self.onChange(tupleArray);
-                var message = new lib.message.Message();
-                message
-                    .type(lib.message.Message.Type.DATA)
-                    .source(self.getEndpointId())
-                    .format(self.model.urn+":attributes");
-                for (var attributeName1 in data) {
-                    var attribute1 = self.attributes[attributeName1];
-                    attribute1._.remoteUpdate(data[attributeName1], false);
-                    message.dataItem(attributeName1, data[attributeName1]);
-                }
-                messageDispatcher.queue(message);
-                return lib.message.Message.buildResponseMessage(requestMessage, 200, {}, 'OK', '');
             } catch (e) {
                 return lib.message.Message.buildResponseMessage(requestMessage, 500, {}, 'Internal Server Error', '');
             }
@@ -6789,9 +8151,7 @@ lib.device.VirtualDevice = function (endpointId, deviceModel, client) {
 
     // seal object
     Object.preventExtensions(this);
-
     this.client._.addVirtualDevice(this);
-
 };
 
 lib.device.VirtualDevice.prototype = Object.create(lib.AbstractVirtualDevice.prototype);
@@ -6860,6 +8220,1193 @@ lib.device.VirtualDevice.prototype.close = function () {
     this.onChange = function (arg) {};
     this.onError = function (arg) {};
 };
+
+
+//////////////////////////////////////////////////////////////////////////////
+// file: library/shared/ExternalObject.js
+
+/**
+ * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ *
+ * This software is dual-licensed to you under the MIT License (MIT) and
+ * the Universal Permissive License (UPL). See the LICENSE file in the root
+ * directory for license terms. You may choose either license, or both.
+ *
+ */
+
+/**
+ * ExternalObject represents the value of a URI type in a device model.
+ * The application is responsible for uploading/downloading the content referred to by the URI.
+ *
+ * @param {String} uri - the URI
+ *
+ * @class
+ * @memberOf iotcs
+ * @alias ExternalObject
+ */
+lib.ExternalObject = function (uri) {
+    _optionalArg(uri, "string");
+
+    Object.defineProperty(this, '_',{
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: {}
+    });
+
+    Object.defineProperty(this._, 'internal',{
+        enumerable: false,
+        configurable: true,
+        writable: false,
+        value: {
+            uri: uri || null
+        }
+    });
+};
+
+/**
+ * Get the URI value.
+ *
+ * @returns {String} URI
+ * @memberof iotcs.ExternalObject.prototype
+ * @function getURI
+ */
+lib.ExternalObject.prototype.getURI = function () {
+    return this._.internal.uri;
+};
+
+
+//////////////////////////////////////////////////////////////////////////////
+// file: library/shared/StorageObject.js
+
+/**
+ * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ *
+ * This software is dual-licensed to you under the MIT License (MIT) and
+ * the Universal Permissive License (UPL). See the LICENSE file in the root
+ * directory for license terms. You may choose either license, or both.
+ *
+ */
+
+/**
+ * StorageObject provides information about content in cloud storage.
+ * For creation use {@link iotcs.device.util.DirectlyConnectedDevice#createStorageObject}
+ *
+ * @param {?String} uri - the full URI of the object in the Storage Cloud
+ * @param {?String} name - name of the object used in the Storage Cloud
+ * @param {?String} type - type of the object, if <code>null</code> then {@link iotcs.StorageObject.MIME_TYPE}
+ * @param {?String} encoding - encoding of the object, or <code>null</code> if none
+ * @param {?Date} date - last-modified date of the object
+ * @param {number} [length = -1] - length of the object
+ *
+ * @class
+ * @memberOf iotcs
+ * @alias StorageObject
+ * @extends iotcs.ExternalObject
+ */
+lib.StorageObject = function (uri, name, type, encoding, date, length) {
+    _optionalArg(uri, 'string');
+    _optionalArg(name, 'string');
+    _optionalArg(type, 'string');
+    _optionalArg(encoding, 'string');
+    _optionalArg(date, Date);
+    _optionalArg(length, 'number');
+
+    lib.ExternalObject.call(this, uri);
+
+    var spec = {
+        name: name || null,
+        type: type || lib.StorageObject.MIME_TYPE,
+        encoding: encoding || null,
+        date: date || null,
+        length: length || -1
+    };
+    var self = this;
+
+    Object.defineProperties(this._.internal, {
+        name: {
+            value: spec.name,
+            enumerable: true,
+            writable: true
+        },
+        type: {
+            value: spec.type,
+            enumerable: true,
+            writable: true
+        },
+        inputStream: {
+            value: null,
+            enumerable: true,
+            writable: true
+        },
+        outputStream: {
+            value: null,
+            enumerable: true,
+            writable: true
+        },
+        encoding: {
+            value: spec.encoding,
+            enumerable: true,
+            writable: true
+        },
+        date: {
+            value: spec.date,
+            enumerable: true,
+            writable: true
+        },
+        length: {
+            value: spec.length,
+            enumerable: true,
+            writable: true
+        },
+        progress_state: {
+            value: lib.StorageDispatcher.Progress.State.INITIATED,
+            enumerable: true,
+            writable: true
+        }
+    });
+
+    Object.defineProperty(this._, 'dcd',{
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: null
+    });
+
+    Object.defineProperty(this._, 'setDevice',{
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: function (device) {
+            if (device instanceof lib.device.util.DirectlyConnectedDevice) {
+                self._.dcd = device;
+            } else {
+                lib.error("Invalid device type");
+            }
+        }
+    });
+
+    Object.defineProperty(this._, 'setMetadata',{
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function (date, length) {
+            self._.internal.date = date;
+            self._.internal.length = length;
+        }
+    });
+
+    Object.defineProperty(this._, 'setURI',{
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function (uri) {
+            self._.internal.uri = uri;
+        }
+    });
+
+    Object.defineProperty(this._, 'setProgressState',{
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function (state) {
+            self._.internal.progress_state = state;
+        }
+    });
+
+    Object.defineProperty(this._, 'isCancelled',{
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function () {
+            return (self._.internal.progress_state === lib.StorageDispatcher.Progress.State.CANCELLED);
+        }
+    });
+};
+
+lib.StorageObject.prototype = Object.create(lib.ExternalObject.prototype);
+lib.StorageObject.constructor = lib.StorageObject;
+
+/**
+ * Set an input stream for content to be uploaded.
+ * The implementation allows for either the input stream to be set,
+ * or the output stream to be set, but not both.
+ * If the input stream parameter is not null, the output stream will be set to null.
+ *
+ * @param {stream.Readable} stream - readable stream to which the content will be read.
+ *
+ * @memberof iotcs.StorageObject.prototype
+ * @function setInputStream
+ */
+lib.StorageObject.prototype.setInputStream = function (stream) {
+    _mandatoryArg(stream, require('stream').Readable);
+    switch (this._.internal.progress_state) {
+        case lib.StorageDispatcher.Progress.State.QUEUED:
+        case lib.StorageDispatcher.Progress.State.IN_PROGRESS:
+            lib.error("Can't set input stream during transfer process.");
+            return;
+        case lib.StorageDispatcher.Progress.State.COMPLETED:
+            this._.internal.progress_state = lib.StorageDispatcher.Progress.INITIATED;
+    }
+    this._.internal.inputStream = stream;
+    this._.internal.outputStream = null;
+};
+
+/**
+ * Set an output stream for content to be downloaded.
+ * The implementation allows for either the output stream to be set,
+ * or the input stream to be set, but not both.
+ * If the output stream parameter is not null, the input stream will be set to null.
+ *
+ * @param {stream.Writable} stream - writable stream to which the content will be written.
+ *
+ * @memberof iotcs.StorageObject.prototype
+ * @function setOutputStream
+ */
+lib.StorageObject.prototype.setOutputStream = function (stream) {
+    _mandatoryArg(stream, require('stream').Writable);
+    switch (this._.internal.progress_state) {
+        case lib.StorageDispatcher.Progress.State.QUEUED:
+        case lib.StorageDispatcher.Progress.State.IN_PROGRESS:
+            lib.error("Can't set output stream during transfer process.");
+            return;
+        case lib.StorageDispatcher.Progress.State.COMPLETED:
+            this._.internal.progress_state = lib.StorageDispatcher.Progress.INITIATED;
+    }
+    this._.internal.outputStream = stream;
+    this._.internal.inputStream = null;
+};
+
+/**
+ * Get the the name of this object in the storage cloud.
+ * This is name and path of the file that was uploaded to the storage cloud.
+ *
+ * @returns {String} name
+ * @memberof iotcs.StorageObject.prototype
+ * @function getName
+ */
+lib.StorageObject.prototype.getName = function () {
+    return this._.internal.name;
+};
+
+/**
+ * Get the mime-type of the content.
+ *
+ * @returns {String} type
+ * @see {@link http://www.iana.org/assignments/media-types/media-types.xhtml|IANA Media Types}
+ * @memberof iotcs.StorageObject.prototype
+ * @function getType
+ */
+lib.StorageObject.prototype.getType = function () {
+    return this._.internal.type;
+};
+
+/**
+ * Get the date and time the content was created or last modified in cloud storage.
+ *
+ * @returns {?Date} date the content was last modified in cloud storage,
+ * or <code>null</code> if the content has not been uploaded
+ * @memberof iotcs.StorageObject.prototype
+ * @function getDate
+ */
+lib.StorageObject.prototype.getDate = function () {
+    return this._.internal.date;
+};
+
+/**
+ * Get the length of the content in bytes.
+ * This is the number of bytes required to upload or download the content.
+ *
+ * @returns {number} the length of the content in bytes, or <code>-1</code> if unknown
+ * @memberof iotcs.StorageObject.prototype
+ * @function getLength
+ */
+lib.StorageObject.prototype.getLength = function () {
+    return this._.internal.length;
+};
+
+/**
+ * Get the compression scheme of the content.
+ *
+ * @returns {?String} the compression scheme of the content,
+ * or <code>null</code> if the content is not compressed
+ * @memberof iotcs.StorageObject.prototype
+ * @function getEncoding
+ */
+lib.StorageObject.prototype.getEncoding = function () {
+    return this._.internal.encoding;
+};
+
+/**
+ * Get the URI value.
+ *
+ * @returns {?String} URI, or <code>null</code> if unknown
+ * @memberof iotcs.StorageObject.prototype
+ * @function getURI
+ */
+lib.StorageObject.prototype.getURI = function () {
+    return this._.internal.uri;
+};
+
+/**
+ * Get the input file path when uploading content.
+ *
+ * @returns {?stream.Readable} input stream, or <code>null</code> if not set
+ * @memberof iotcs.StorageObject.prototype
+ * @function getInputStream
+ */
+lib.StorageObject.prototype.getInputStream = function () {
+    return this._.internal.inputStream;
+};
+
+/**
+ * Get the output file path when downloading content.
+ *
+ * @returns {?stream.Writable} output stream, or <code>null</code> if not set
+ * @memberof iotcs.StorageObject.prototype
+ * @function getOutputStream
+ */
+lib.StorageObject.prototype.getOutputStream = function () {
+    return this._.internal.outputStream;
+};
+
+/**
+ * Synchronize content with the Storage Cloud Service.
+ *
+ * @param {function(storage, error)} callback - the callback function.
+ *
+ * @memberof iotcs.StorageObject.prototype
+ * @function sync
+ */
+lib.StorageObject.prototype.sync = function (callback) {
+    _mandatoryArg(callback, 'function');
+    this._.dcd._.sync_storage(this, callback, callback);
+};
+
+/**
+ * @constant MIME_TYPE
+ * @memberOf iotcs.StorageObject
+ * @type {String}
+ * @default "application/octet-stream"
+ */
+Object.defineProperty(lib.StorageObject, 'MIME_TYPE',{
+    enumerable: false,
+    configurable: false,
+    writable: false,
+    value: "application/octet-stream"
+});
+
+
+//////////////////////////////////////////////////////////////////////////////
+// file: library/device/StorageObject.js
+
+/**
+ * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ *
+ * This software is dual-licensed to you under the MIT License (MIT) and
+ * the Universal Permissive License (UPL). See the LICENSE file in the root
+ * directory for license terms. You may choose either license, or both.
+ *
+ */
+
+/**
+ * StorageObject provides information about content in cloud storage.
+ * For creation use {@link iotcs.device.DirectlyConnectedDevice#createStorageObject}
+ *
+ * @param {?String} uri - the full URI of the object in the Storage Cloud
+ * @param {?String} name - name of the object used in the Storage Cloud
+ * @param {?String} type - type of the object, if <code>null</code> then {@link iotcs.StorageObject.MIME_TYPE}
+ * @param {?String} encoding - encoding of the object, or <code>null</code> if none
+ * @param {?Date} date - last-modified date of the object
+ * @param {number} [length = -1] - length of the object
+ *
+ * @class
+ * @memberOf iotcs.device
+ * @alias StorageObject
+ * @extends iotcs.ExternalObject
+ */
+lib.device.StorageObject = function (uri, name, type, encoding, date, length) {
+    lib.StorageObject.call(this, uri, name, type, encoding, date, length);
+
+    var self = this;
+    Object.defineProperty(this._.internal, 'syncStatus',{
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: lib.device.StorageObject.SyncStatus.NOT_IN_SYNC
+    });
+
+    Object.defineProperty(this._.internal, 'inputPath',{
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: null
+    });
+
+    Object.defineProperty(this._.internal, 'outputPath',{
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: null
+    });
+
+    Object.defineProperty(this, 'onSync', {
+        enumerable: false,
+        configurable: false,
+        get: function () {
+            return self._.onSync;
+        },
+        set: function (newValue) {
+            if (!newValue || (typeof newValue !== 'function')) {
+                lib.error('trying to set something to onDelivery that is not a function!');
+                return;
+            }
+            self._.onSync = newValue;
+        }
+    });
+
+    this._.onSync = function (arg) {};
+
+    Object.defineProperty(this._.internal, 'syncEvents',{
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: [null]
+    });
+
+    Object.defineProperty(this._, 'addSyncEvent', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function (syncEvent) {
+            switch (self.getSyncStatus()) {
+                case lib.device.StorageObject.SyncStatus.NOT_IN_SYNC:
+                case lib.device.StorageObject.SyncStatus.SYNC_PENDING:
+                    self._.internal.syncEvents.push(syncEvent);
+                    break;
+                case lib.device.StorageObject.SyncStatus.IN_SYNC:
+                case lib.device.StorageObject.SyncStatus.SYNC_FAILED:
+                    self._.onSync(syncEvent);
+                    break;
+            }
+        }
+    });
+
+    Object.defineProperty(this._, 'createSyncEvent', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function () {
+            return new lib.device.StorageObject.SyncEvent(self, self._.nameForSyncEvent, self._.deviceForSync);
+        }
+    });
+
+    Object.defineProperty(this._, 'deviceForSync', {
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: null
+    });
+
+    Object.defineProperty(this._, 'nameForSyncEvent', {
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: null
+    });
+
+    Object.defineProperty(this._, 'setSyncEventInfo', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function (name, virtualDevice) {
+            self._.nameForSyncEvent = name;
+            self._.deviceForSync = virtualDevice;
+        }
+    });
+
+    Object.defineProperty(this._, 'handleStateChange', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function () {
+            if (self._.deviceForSync) {
+                self._.deviceForSync._.handleStorageObjectStateChange(self);
+            }
+        }
+    });
+
+    Object.defineProperty(this._, 'setDevice',{
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function (device) {
+            if (device instanceof lib.device.util.DirectlyConnectedDevice) {
+                self._.dcd = device;
+            } else {
+                lib.error("Invalid device type");
+            }
+        }
+    });
+};
+
+lib.device.StorageObject.prototype = Object.create(lib.StorageObject.prototype);
+lib.device.StorageObject.constructor = lib.device.StorageObject;
+
+/**
+ * Set an input file path for content to be uploaded.
+ * The implementation allows for either the input path to be set,
+ * or the output path to be set, but not both.
+ * If the input path parameter is not null, the output path will be set to null.
+ *
+ * @param {String} path - input file path to which the content will be read.
+ *
+ * @memberof iotcs.device.StorageObject.prototype
+ * @function setInputPath
+ */
+lib.device.StorageObject.prototype.setInputPath = function (path) {
+    _mandatoryArg(path, "string");
+    if (this._.internal.syncStatus === lib.device.StorageObject.SyncStatus.SYNC_PENDING) {
+        lib.error("Illegal state: sync pending");
+        return;
+    }
+    if (this._.internal.inputPath === null || this._.internal.inputPath !== path) {
+        this._.internal.inputPath = path;
+        this._.internal.outputPath = null;
+        this._.internal.syncStatus = lib.device.StorageObject.SyncStatus.NOT_IN_SYNC;
+        lib.StorageObject.prototype.setInputStream.call(this, require("fs").createReadStream(path));
+    }
+};
+
+/**
+ * Set an output file path for content to be downloaded.
+ * The implementation allows for either the output path to be set,
+ * or the input path to be set, but not both.
+ * If the output path parameter is not null, the input path will be set to null.
+ *
+ * @param {String} path - output file path to which the content will be written.
+ *
+ * @memberof iotcs.device.StorageObject.prototype
+ * @function setOutputPath
+ */
+lib.device.StorageObject.prototype.setOutputPath = function (path) {
+    _mandatoryArg(path, "string");
+    if (this._.internal.syncStatus === lib.device.StorageObject.SyncStatus.SYNC_PENDING) {
+        lib.error("Illegal state: sync pending");
+        return;
+    }
+    if (this._.internal.outputPath === null || this._.internal.outputPath !== path) {
+        this._.internal.outputPath = path;
+        this._.internal.inputPath = null;
+        this._.internal.syncStatus = lib.device.StorageObject.SyncStatus.NOT_IN_SYNC;
+        lib.StorageObject.prototype.setOutputStream.call(this, require("fs").createWriteStream(path));
+    }
+};
+
+/**
+ * Get the the name of this object in the storage cloud.
+ * This is name and path of the file that was uploaded to the storage cloud.
+ *
+ * @returns {String} name
+ * @memberof iotcs.device.StorageObject.prototype
+ * @function getName
+ */
+lib.device.StorageObject.prototype.getName = function () {
+    return this._.internal.name;
+};
+
+/**
+ * Get the mime-type of the content.
+ *
+ * @returns {String} type
+ * @see {@link http://www.iana.org/assignments/media-types/media-types.xhtml|IANA Media Types}
+ * @memberof iotcs.device.StorageObject.prototype
+ * @function getType
+ */
+lib.device.StorageObject.prototype.getType = function () {
+    return this._.internal.type;
+};
+
+/**
+ * Get the date and time the content was created or last modified in cloud storage.
+ *
+ * @returns {?Date} date the content was last modified in cloud storage,
+ * or <code>null</code> if the content has not been uploaded
+ * @memberof iotcs.device.StorageObject.prototype
+ * @function getDate
+ */
+lib.device.StorageObject.prototype.getDate = function () {
+    return this._.internal.date;
+};
+
+/**
+ * Get the length of the content in bytes.
+ * This is the number of bytes required to upload or download the content.
+ *
+ * @returns {number} the length of the content in bytes, or <code>-1</code> if unknown
+ * @memberof iotcs.device.StorageObject.prototype
+ * @function getLength
+ */
+lib.device.StorageObject.prototype.getLength = function () {
+    return this._.internal.length;
+};
+
+/**
+ * Get the compression scheme of the content.
+ *
+ * @returns {?String} the compression scheme of the content,
+ * or <code>null</code> if the content is not compressed
+ * @memberof iotcs.StorageObject.prototype
+ * @function getEncoding
+ */
+lib.StorageObject.prototype.getEncoding = function () {
+    return this._.internal.encoding;
+};
+
+/**
+ * Get the URI value.
+ *
+ * @returns {?String} URI, or <code>null</code> if unknown
+ * @memberof iotcs.device.StorageObject.prototype
+ * @function getURI
+ */
+lib.device.StorageObject.prototype.getURI = function () {
+    return this._.internal.uri;
+};
+
+/**
+ * Get the input file path when uploading content.
+ *
+ * @returns {String} input file path
+ * @memberof iotcs.device.StorageObject.prototype
+ * @function getInputPath
+ */
+lib.device.StorageObject.prototype.getInputPath = function () {
+    return this._.internal.inputPath;
+};
+
+/**
+ * Get the output file path when downloading content.
+ *
+ * @returns {String} output file path
+ * @memberof iotcs.device.StorageObject.prototype
+ * @function getOutputPath
+ */
+lib.device.StorageObject.prototype.getOutputPath = function () {
+    return this._.internal.outputPath;
+};
+
+/**
+ * Notify the library to sync content with the storage cloud.
+ *
+ * @memberof iotcs.device.StorageObject.prototype
+ * @function sync
+ */
+lib.device.StorageObject.prototype.sync = function () {
+    var syncEvent = this._.createSyncEvent();
+    if (this._.internal.syncStatus === lib.device.StorageObject.SyncStatus.NOT_IN_SYNC) {
+        if (this._.internal.inputStream || this._.internal.outputStream) {
+            this._.internal.syncStatus = lib.device.StorageObject.SyncStatus.SYNC_PENDING;
+        } else {
+            lib.error("input path or output path must be set");
+            return;
+        }
+        this._.addSyncEvent(syncEvent);
+        new lib.device.util.StorageDispatcher(this._.dcd).queue(this);
+    } else {
+        this._.addSyncEvent(syncEvent);
+    }
+};
+
+/**
+ * Get the status of whether or not the content is in sync with the storage cloud.
+ *
+ * @see {@link iotcs.device.StorageObject.SyncStatus}
+ * @memberof iotcs.device.StorageObject.prototype
+ * @function getSyncStatus
+ */
+lib.device.StorageObject.prototype.getSyncStatus = function () {
+    return this._.internal.syncStatus;
+};
+
+/**
+ * Enumeration of the status of whether or not the content is in sync with the storage cloud.
+ *
+ * @memberOf iotcs.device.StorageObject
+ * @alias SyncStatus
+ * @readonly
+ * @enum {String}
+ */
+lib.device.StorageObject.SyncStatus = {
+    /**
+     * The content is not in sync with the storage cloud
+     */
+    NOT_IN_SYNC: "NOT_IN_SYNC",
+    /**
+     * The content is not in sync with the storage cloud, but a
+     * sync is pending.
+     */
+    SYNC_PENDING: "SYNC_PENDING",
+    /**
+     * The content is in sync with the storage cloud
+     */
+    IN_SYNC: "IN_SYNC",
+    /**
+     * The content is not in sync with the storage cloud because the upload or download failed.
+     */
+    SYNC_FAILED: "SYNC_FAILED"
+};
+
+/**
+ * An event passed to the onSync callback when content referred to by
+ * an attribute value has been successfully synchronized, or has failed to be synchronized
+ *
+ * @param {iotcs.device.StorageObject} storageObject
+ * @param {String} [name]
+ * @param {iotcs.device.VirtualDevice} [virtualDevice]
+ *
+ * @class
+ * @memberOf iotcs.device.StorageObject
+ * @alias SyncEvent
+ */
+lib.device.StorageObject.SyncEvent = function (storageObject, name, virtualDevice) {
+    _mandatoryArg(storageObject, lib.device.StorageObject);
+    _optionalArg(name, "string");
+    _optionalArg(virtualDevice, lib.device.VirtualDevice);
+
+    Object.defineProperty(this, '_', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: {}
+    });
+
+    Object.defineProperty(this._, 'internal', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: {
+            storage: storageObject,
+            name: name,
+            virtualDevice: virtualDevice
+        }
+    });
+};
+
+/**
+ * Get the virtual device that is the source of the event.
+ *
+ * @returns {iotcs.device.VirtualDevice} the virtual device, or <code>null</code> if sync was called independently
+ * @memberof iotcs.device.StorageObject.SyncEvent.prototype
+ * @function getVirtualDevice
+ */
+lib.device.StorageObject.SyncEvent.prototype.getVirtualDevice = function () {
+    return this._.internal.virtualDevice;
+};
+
+/**
+ * Get the name of the attribute, action, or format that this event is associated with.
+ *
+ * @returns {String} the name, or <code>null</code> if sync was called independently
+ * @memberof iotcs.device.StorageObject.SyncEvent.prototype
+ * @function getName
+ */
+lib.device.StorageObject.SyncEvent.prototype.getName = function () {
+    return this._.internal.name;
+};
+
+/**
+ * Get the StorageObject that is the source of this event.
+ *
+ * @returns {iotcs.device.StorageObject} the storage object
+ * @memberof iotcs.device.StorageObject.SyncEvent.prototype
+ * @function getSource
+ */
+lib.device.StorageObject.SyncEvent.prototype.getSource = function () {
+    return this._.internal.storage;
+};
+
+
+//////////////////////////////////////////////////////////////////////////////
+// file: library/shared/StorageDispatcher.js
+
+/**
+ * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ *
+ * This software is dual-licensed to you under the MIT License (MIT) and
+ * the Universal Permissive License (UPL). See the LICENSE file in the root
+ * directory for license terms. You may choose either license, or both.
+ *
+ */
+
+/** @ignore */
+lib.StorageDispatcher = function (device) {
+    _mandatoryArg(device, "object");
+    var self = this;
+    Object.defineProperty(this, '_', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: {}
+    });
+
+    Object.defineProperty(this._, 'device', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: device
+    });
+
+    Object.defineProperty(this, 'onProgress', {
+        enumerable: false,
+        configurable: false,
+        get: function () {
+            return self._.onProgress;
+        },
+        set: function (newValue) {
+            if (!newValue || (typeof newValue !== 'function')) {
+                lib.error('trying to set something to onDelivery that is not a function!');
+                return;
+            }
+            self._.onProgress = newValue;
+        }
+    });
+    this._.onProgress = function (arg, error) {};
+
+    Object.defineProperty(this._, 'queue', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: new $impl.PriorityQueue(lib.oracle.iot.client.maximumStorageObjectsToQueue)
+    });
+
+    Object.defineProperty(this._, 'push', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function (storage) {
+            self._.queue.push(storage);
+        }
+    });
+
+    Object.defineProperty(this._, 'remove', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function (storage) {
+            return self._.queue.remove(storage);
+        }
+    });
+
+    Object.defineProperty(device, 'storageDispatcher', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: this
+    });
+};
+
+/** @ignore */
+lib.StorageDispatcher.prototype.queue = function (storageObject) {
+    _mandatoryArg(storageObject, lib.StorageObject);
+    if (storageObject._.internal.progress_state === lib.StorageDispatcher.Progress.State.COMPLETED) {
+        return;
+    }
+    if (storageObject._.internal.progress_state === lib.StorageDispatcher.Progress.State.QUEUED ||
+        storageObject._.internal.progress_state === lib.StorageDispatcher.Progress.State.IN_PROGRESS) {
+        lib.error("Can't queue storage during transfer process.");
+        return;
+    }
+    storageObject._.setProgressState(lib.StorageDispatcher.Progress.State.QUEUED);
+    this._.push(storageObject);
+    this._.onProgress(new lib.StorageDispatcher.Progress(storageObject));
+};
+
+/** @ignore */
+lib.StorageDispatcher.prototype.cancel = function (storageObject) {
+    _mandatoryArg(storageObject, lib.StorageObject);
+    var cancelled = false;
+    if (storageObject._.internal.progress_state === lib.StorageDispatcher.Progress.State.QUEUED) {
+        cancelled = (this._.remove(storageObject) !== null);
+    }
+    if (cancelled ||
+        storageObject._.internal.progress_state === lib.StorageDispatcher.Progress.State.IN_PROGRESS) {
+        storageObject._.setProgressState(lib.StorageDispatcher.Progress.State.CANCELLED);
+    }
+
+    if (cancelled) {
+        this._.onProgress(new lib.StorageDispatcher.Progress(storageObject));
+    }
+};
+
+/** @ignore */
+lib.StorageDispatcher.Progress = function (storageObject) {
+    _mandatoryArg(storageObject, lib.StorageObject);
+
+    Object.defineProperty(this, '_', {
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: {}
+    });
+
+    Object.defineProperty(this._, 'internal', {
+        enumerable: false,
+        configurable: false,
+        writable: true,
+        value: {
+            storage: storageObject,
+            state: storageObject._.internal.progress_state,
+            bytesTransferred: 0
+        }
+    });
+
+    var self = this;
+    Object.defineProperty(this._, 'setBytesTransferred', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function (bytes) {
+            self._.internal.bytesTransferred = bytes;
+        }
+    });
+};
+
+/** @ignore */
+lib.StorageDispatcher.Progress.prototype.getBytesTransferred = function () {
+    return this._.internal.bytesTransferred;
+};
+
+/** @ignore */
+lib.StorageDispatcher.Progress.prototype.getState = function () {
+    return this._.internal.state;
+};
+
+/** @ignore */
+lib.StorageDispatcher.Progress.prototype.getStorageObject = function () {
+    return this._.internal.storage;
+};
+
+lib.StorageDispatcher.Progress.State = {
+    /** Up/download was cancelled before it completed */
+    CANCELLED: "CANCELLED",
+    /** Up/download completed successfully */
+    COMPLETED: "COMPLETED",
+    /** Up/download failed without completing */
+    FAILED: "FAILED",
+    /** Up/download is currently in progress */
+    IN_PROGRESS: "IN_PROGRESS",
+    /** Initial state */
+    INITIATED: "INITIATED",
+    /** Up/download is queued and not yet started */
+    QUEUED: "QUEUED"
+};
+
+//////////////////////////////////////////////////////////////////////////////
+// file: library/device/StorageDispatcher.js
+
+/**
+ * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ *
+ * This software is dual-licensed to you under the MIT License (MIT) and
+ * the Universal Permissive License (UPL). See the LICENSE file in the root
+ * directory for license terms. You may choose either license, or both.
+ *
+ */
+
+/**
+ * The StorageDispatcher queues content for automatic upload to, or download from, the Oracle Storage Cloud Service.
+ * <p>
+ * There can be only one StorageDispatcher instance per DirectlyConnectedDevice at a time and it is created
+ * at first use. To close an instance of a StorageDispatcher the DirectlyConnectedDevice.close method must be used.
+ * <p>
+ * The onProgress can be used to set handlers that are used for notifying as the transfer progresses:
+ * <p>
+ * <code>storageDispatcher.onProgress = function (progress, error);</code><br>
+ * where {@link iotcs.device.util.StorageDispatcher.Progress} progress is an object represents the transfer progress
+ * of storage object
+ *
+ * @param {iotcs.device.util.DirectlyConnectedDevice} device - the directly
+ * connected device (Messaging API) associated with this storage dispatcher
+ *
+ * @class
+ * @memberOf iotcs.device.util
+ * @alias StorageDispatcher
+ * @extends iotcs.StorageDispatcher
+ */
+lib.device.util.StorageDispatcher = function (device) {
+    _mandatoryArg(device, lib.device.util.DirectlyConnectedDevice);
+
+    if (device.storageDispatcher) {
+        return device.storageDispatcher;
+    }
+    lib.StorageDispatcher.call(this, device);
+
+    var self = this;
+    var client = device;
+    var poolingInterval = lib.oracle.iot.client.device.defaultMessagePoolingInterval;
+    var startPooling = null;
+
+    var processCallback = function (storage, state, bytes) {
+        storage._.setProgressState(state);
+        var progress = new lib.device.util.StorageDispatcher.Progress(storage);
+        progress._.setBytesTransferred(bytes);
+        self._.onProgress(progress);
+    };
+
+    var deliveryCallback = function (storage, error, bytes) {
+        storage._.setProgressState(lib.StorageDispatcher.Progress.State.COMPLETED);
+        var progress = new lib.device.util.StorageDispatcher.Progress(storage);
+        progress._.setBytesTransferred(bytes);
+        self._.onProgress(progress, error);
+    };
+
+    var errorCallback = function (storage, error, bytes) {
+        storage._.setProgressState(lib.StorageDispatcher.Progress.State.FAILED);
+        var progress = new lib.device.util.StorageDispatcher.Progress(storage);
+        progress._.setBytesTransferred(bytes);
+        self._.onProgress(progress, error);
+    };
+
+    var sendMonitor = new $impl.Monitor(function () {
+        var currentTime = Date.now();
+        if (currentTime >= (startPooling + poolingInterval)) {
+            if (!device.isActivated() || device._.internalDev._.activating
+                || device._.internalDev._.refreshing || device._.internalDev._.storage_refreshing) {
+                startPooling = currentTime;
+                return;
+            }
+            var storage = self._.queue.pop();
+            while (storage !== null) {
+                storage._.setProgressState(lib.StorageDispatcher.Progress.State.IN_PROGRESS);
+                self._.onProgress(new lib.device.util.StorageDispatcher.Progress(storage));
+                client._.sync_storage(storage, deliveryCallback, errorCallback, processCallback);
+                storage = self._.queue.pop();
+            }
+            startPooling = currentTime;
+        }
+    });
+
+    Object.defineProperty(this._, 'stop', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: function () {
+            sendMonitor.stop();
+        }
+    });
+
+    startPooling = Date.now();
+    sendMonitor.start();
+};
+
+lib.device.util.StorageDispatcher.prototype = Object.create(lib.StorageDispatcher);
+lib.device.util.StorageDispatcher.constructor = lib.device.util.StorageDispatcher;
+
+/**
+ * Add a StorageObject to the queue to upload/download content to/from the Storage Cloud.
+ *
+ * @param {iotcs.StorageObject} storageObject - The content storageObject to be queued
+ *
+ * @memberof iotcs.device.util.StorageDispatcher.prototype
+ * @function queue
+ */
+lib.device.util.StorageDispatcher.prototype.queue = function (storageObject) {
+    _mandatoryArg(storageObject, lib.StorageObject);
+    lib.StorageDispatcher.prototype.queue.call(this, storageObject);
+};
+
+/**
+ * Cancel the transfer of content to or from storage.
+ * This call has no effect if the transfer is completed, already cancelled, has failed, or the storageObject is not queued.
+ *
+ * @param {iotcs.StorageObject} storageObject - The content storageObject to be cancelled
+ *
+ * @memberof iotcs.device.util.StorageDispatcher.prototype
+ * @function cancel
+ */
+lib.device.util.StorageDispatcher.prototype.cancel = function (storageObject) {
+    _mandatoryArg(storageObject, lib.StorageObject);
+    lib.StorageDispatcher.prototype.cancel.call(this, storageObject);
+};
+
+/**
+ * An object for receiving progress via the ProgressCallback.
+ *
+ * @param {iotcs.StorageObject} storageObject - the storage object which progress will be tracked
+ *
+ * @class
+ * @memberOf iotcs.device.util.StorageDispatcher
+ * @alias Progress
+ */
+lib.device.util.StorageDispatcher.Progress = function (storageObject) {
+    _mandatoryArg(storageObject, lib.StorageObject);
+    lib.StorageDispatcher.Progress.call(this, storageObject);
+};
+
+lib.device.util.StorageDispatcher.Progress.prototype = Object.create(lib.StorageDispatcher.Progress);
+lib.device.util.StorageDispatcher.Progress.constructor = lib.device.util.StorageDispatcher.Progress;
+
+/**
+ * Get the number of bytes transferred.
+ * This can be compared to the length of content obtained by calling {@link iotcs.StorageObject#getLength}.
+ *
+ * @returns {number} the number of bytes transferred
+ *
+ * @memberof iotcs.device.util.StorageDispatcher.Progress.prototype
+ * @function getBytesTransferred
+ */
+lib.device.util.StorageDispatcher.Progress.prototype.getBytesTransferred = function () {
+    return lib.StorageDispatcher.Progress.prototype.getBytesTransferred.call(this);
+};
+
+/**
+ * Get the state of the transfer
+ *
+ * @returns {iotcs.device.util.StorageDispatcher.Progress.State} the transfer state
+ *
+ * @memberof iotcs.device.util.StorageDispatcher.Progress.prototype
+ * @function getState
+ */
+lib.device.util.StorageDispatcher.Progress.prototype.getState = function () {
+    return lib.StorageDispatcher.Progress.prototype.getState.call(this);
+};
+
+/**
+* Get the StorageObject that was queued for which this progress event pertains.
+*
+* @returns {iotcs.StorageObject} a StorageObject
+*
+* @memberof iotcs.device.util.StorageDispatcher.Progress.prototype
+* @function getStorageObject
+*/
+lib.device.util.StorageDispatcher.Progress.prototype.getStorageObject = function () {
+    return lib.StorageDispatcher.Progress.prototype.getStorageObject.call(this);
+};
+
+/**
+ * Enumeration of progress state
+ *
+ * @memberOf iotcs.device.util.StorageDispatcher.Progress
+ * @alias State
+ * @readonly
+ * @enum {String}
+ */
+lib.device.util.StorageDispatcher.Progress.State = {
+    /** Up/download was cancelled before it completed */
+    CANCELLED: "CANCELLED",
+    /** Up/download completed successfully */
+    COMPLETED: "COMPLETED",
+    /** Up/download failed without completing */
+    FAILED: "FAILED",
+    /** Up/download is currently in progress */
+    IN_PROGRESS: "IN_PROGRESS",
+    /** Initial state */
+    INITIATED: "INITIATED",
+    /** Up/download is queued and not yet started */
+    QUEUED: "QUEUED"
+};
+
 
 
 

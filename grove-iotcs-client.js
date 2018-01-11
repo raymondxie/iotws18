@@ -19,7 +19,7 @@ const DEVICE_MODEL_URN = '[TODO-REPLACE-WITH-YOUR-DEVICE-MODEL_URN]';
 
 // Setup IoT Device Client Lib
 // IoTCS device library in NodeJS
-var iotClient = require("device-library.node");
+var iotClient = require("./device-client-lib/device-library.node");
 iotClient = iotClient({debug: true});
 iotClient.oracle.iot.tam.store = (process.argv[2]);
 iotClient.oracle.iot.tam.storePassword = (process.argv[3]);

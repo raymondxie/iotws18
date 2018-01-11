@@ -21,12 +21,13 @@
 
 // TODO: please supply the device model associated with your device
 // For example:  const DEVICE_MODEL_URN = 'urn:com:oracle:iot:wionode:mydevicemodel';
-const DEVICE_MODEL_URN = '[TODO-REPLACE-WITH-YOUR-DEVICE-MODEL_URN]';
+// const DEVICE_MODEL_URN = '[TODO-REPLACE-WITH-YOUR-DEVICE-MODEL_URN]';
+const DEVICE_MODEL_URN = 'urn:com:oracle:iot:workshop:mdc';
 
 
 // Setup IoT Device Client Lib
 // IoTCS device library in NodeJS
-var iotClient = require("device-library.node");
+var iotClient = require("./device-client-lib/device-library.node");
 iotClient = iotClient({debug: true});
 iotClient.oracle.iot.tam.store = (process.argv[2]);
 iotClient.oracle.iot.tam.storePassword = (process.argv[3]);
@@ -44,21 +45,16 @@ const log = require('npmlog');
 
 // Current Sensor Values - collected from "sensor-config.js" file and populated at run-time
 var currentData = {};
-currentData['operator'] = "YOUR_NAME";  // replace with your own name, so we can see whose sensor data coming in.
+currentData['operator'] = "YOUR_NAME";  // TODO: replace with your own name, so we can see whose sensor data coming in.
 
 /*
 For example, after population of sensors:
 var currentData = {
-    button: false,
-    sound: 0,
-    angle: 0,
-    lightLevel: 0,
-    range: 0,
-    temperature: 0,
-    humidity: 0,
-    heatIndex: 0,
-    buzzer: false,
-    led: false
+    temperature: 68.5,
+    humidity: 12.4,
+    light: 345,
+    soundfreq: 0,
+    lightlevel: 0
 };
 */
 
@@ -66,6 +62,9 @@ const device = new iotClient.device.DirectlyConnectedDevice();
 
 // Virtual Device toward IoTCS side
 var virtualDev;
+
+// Wio board
+var board;
 
 //
 // Main entry point of execution
@@ -92,10 +91,10 @@ activateDeviceIfNeeded(device)
  *
  * @returns {Promise} that completes when the board has been initialized
  */
-function createWioBoard() {
+function createWioBoard(virtualDev) {
     return new Promise((resolve, reject) => {
         // construct a Wio board
-        var board = new WioNode({
+        board = new WioNode({
             "debug": true,
             "token": wioConfig.token,
             "location": wioConfig.location

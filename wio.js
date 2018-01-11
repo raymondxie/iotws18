@@ -7,7 +7,7 @@
 
 const log = require('npmlog')
 // const wioRest = require('./sensor-config.js').wio_iot;
-// const wioClient = require('node-wio-link')(wioRest.location)
+// const wioClient = require('./node-wio-link')(wioRest.location)
 
 const streamDelay = 100;    // default stream interval: 100ms
 const location = 'us';      // default Wio server location
@@ -36,7 +36,7 @@ function WioNode(opts) {
     else 
         this.serverLocation = location
 
-    this.wioBoard = require('node-wio-link')(this.serverLocation)
+    this.wioBoard = require('./node-wio-link')(this.serverLocation)
 }
 
 // WioNode.prototype = new WioNode();

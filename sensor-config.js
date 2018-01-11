@@ -68,14 +68,6 @@ exports.wio_node = [
     "val": 0
   },
   {
-    // LED light
-    "type": "OUTPUT",  
-    "pin": "GenericDOutD1",
-    "property": "onoff",
-    "attr": "ledonoff",
-    "val": "0"
-  },
-  {
     // LED Bar
     "type": "OUTPUT",  
     "pin": "GroveLEDBarUART0",
@@ -89,6 +81,14 @@ exports.wio_node = [
     "pin": "GroveSpeakerD0",
     "property": "sound_start",
     "attr": "soundfreq",
+    "val": "0"
+  },
+  {
+    // LED light
+    "type": "OUTPUT",  
+    "pin": "GenericDOutD1",
+    "property": "onoff",
+    "attr": "ledonoff",
     "val": "0"
   }
 ];
