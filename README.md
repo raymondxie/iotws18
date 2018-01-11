@@ -24,4 +24,4 @@ the main client code that interacts with Wio board and sensors on one side, and 
 
 node wio-iotcs-client.js <provision_file> <provision_file_secret>
 
-then it will continuously read sensor data and feed to IoTCS, as well as listening to commands from IoTCS to control device output.
+then the program will continuously read input data from sensor and feed to IoTCS, as well as listen for commands from IoTCS to control device output.
