@@ -20,3 +20,8 @@ the configuration file for your Wio board sensor setup, as well as mapping to de
 
 the main client code that interacts with Wio board and sensors on one side, and communicates with IoTCS on the other side. 
 
+**5. To run the program**
+
+node wio-iotcs-client.js <provision_file> <provision_file_secret>
+
+then the program will continuously read input data from sensor and feed to IoTCS, as well as listen for commands from IoTCS to control device output.
