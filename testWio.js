@@ -25,15 +25,18 @@ var board = new WioNode({
 // possible calls to Wio board 
 //
 // write once
-board.write(callback, 'GroveSpeakerD0', 'sound_ms', '443', '1000');
+board.write(callback, 'GroveSpeakerD2', 'sound_ms', '443', '1000');
 // read once
-board.read(callback, 'GroveTempHumD1', 'temperature');
+board.read(callback, 'GroveTempHumD1', 'humidity');
+// read once
+board.read(callback, 'GroveLuminanceA0', 'luminance');
+
 // continuous reading
 board.stream('GroveTempHumD1', 'temperature', 1000, callback);
 // stop continuous reading after 20 seconds
 setTimeout(function(){
     board.stopStream('GroveTempHumD1', 'temperature');
-}, 20000);
+}, 10000);
 
 
 /*

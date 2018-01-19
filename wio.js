@@ -9,9 +9,17 @@ const log = require('npmlog')
 // const wioRest = require('./sensor-config.js').wio_iot;
 // const wioClient = require('./node-wio-link')(wioRest.location)
 
+// the returned data from virtualization server has different property name as requested
+const property_attribute_mapping = {
+    "temperature": "celsius_degree",
+    "luminance": "lux"
+};
+
 const streamDelay = 100;    // default stream interval: 100ms
 const location = 'us';      // default Wio server location
 var streams = {};
+
+
 
 function WioNode(opts) {
     if (typeof opts == 'undefined') 
@@ -72,13 +80,24 @@ WioNode.prototype.write = function(callback, connector, action, ...details) {
  * property: which data property to read. For example: Temperature & Humidity sensor may have "temperature" and "humidity" properties
  */
 WioNode.prototype.read = function(callback, connector, property) {
+    // console.log("reading wio sensor: ", connector, property);
     this.wioBoard.node.read(this.restToken, connector, property)
         .then(function(data) {
-            console.log(data)
-            callback(data, null);
+            console.log("sensor data: ", data);
+
+            var attr = property_attribute_mapping[property];
+            if( attr != undefined ) {
+                var val = data[attr];
+                var newData = {};
+                newData[property] = val;
+                callback(newData, null);
+            }
+            else {
+                callback(data, null);
+            }
         })
         .catch(function(error) {
-            console.log(error)
+            console.log("sensor error: ", error);
             callback(null, error);
         });
 }
@@ -107,7 +126,7 @@ WioNode.prototype.stream = function(connector, property, delay, callback) {
  *
  */
 WioNode.prototype.stopStream = function(connector, property) {
-    console.log("stopSteam");
+    console.log("stopSteam: ", connector, property);
     if( streams[connector+property] !== 'undefined' || streams[connector+property] !== null ) {
         clearInterval( streams[connector+property] );
         streams[connector+property] = null;

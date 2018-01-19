@@ -549,7 +549,7 @@ var _getDiskSpace = function() {
                     }
                 }
             });
-        } else if (os.platform() === 'linux') {
+        } else if (os.platform() === 'linux' || os.platform() === "darwin") {
             var prc2 = spawn('df', [__dirname], {timeout: 1000});
             var str2 = prc2.stdout.toString();
             str2 = str2.replace(/\s/g,'  ');
@@ -567,6 +567,7 @@ var _getDiskSpace = function() {
 
 var tls = require('tls');
 tls.checkServerIdentity = function (host, cert) {
+    // console.log("checkServerIdentity: ", host);
     if (cert && cert.subject && cert.subject.CN) {
         var cn = cert.subject.CN;
         if ((typeof cn === 'string') && cn.startsWith('*.')) {
@@ -576,7 +577,8 @@ tls.checkServerIdentity = function (host, cert) {
             }
             cn = cn.substring(1);
         }
-        if (cn === host) {
+        // console.log("cn: " + cn + "  host: " + host);
+        if (cn === host || host.includes(cn)) {
             return;
         }
     }
@@ -4334,7 +4336,7 @@ $impl.DirectlyConnectedDevice.prototype.activate = function (deviceModelUrns, ca
             var publicKey = self._.tam.getPublicKey();
             publicKey = publicKey.substring(publicKey.indexOf('----BEGIN PUBLIC KEY-----')
                 + '----BEGIN PUBLIC KEY-----'.length,
-                publicKey.indexOf('-----END PUBLIC KEY-----')).trim();
+                publicKey.indexOf('-----END PUBLIC KEY-----')).replace(/\r?\n|\r/g, "");
 
             var toBeSigned = forge.util.bytesToHex(forge.util.encodeUtf8(self._.tam.getClientId() + '\n' + algorithm + '\nX.509\nHmacSHA256\n'))
                 + forge.util.bytesToHex(client_secret)

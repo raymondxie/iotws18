@@ -17,7 +17,6 @@ function WioLinkClient(serverLocation) {
     client: axios.create({
       baseURL: `https://${serverLocation}.wio.seeed.io/v1/`,
       headers: {
-        'Content-Type': 'application/json; charset=utf-8',
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json'
       }
