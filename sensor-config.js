@@ -12,6 +12,7 @@ var exports = module.exports = {};
 //    type  - sensor type label, matching with switch() code in mainClient.js
 //    attr  - the attribute name in device model that this sensor data is corresponding to
 //    val   - the initial value for this attribute
+/*
 exports.grovepi = [
   {
     "pin": "A2",
@@ -32,7 +33,7 @@ exports.grovepi = [
     "val": false
   }
 ];
-
+*/
 
 // For Wio Node and sensors
 // {
@@ -43,6 +44,7 @@ exports.grovepi = [
 //   "val": 0                   -- default value for a model attribute
 // }
 exports.wio_node = [
+/*
   {
     // Humidity sensor
     "type": "INPUT",
@@ -59,6 +61,7 @@ exports.wio_node = [
     "attr": "temperature",
     "val": 0
   },
+*/
   {
     // Light Sensor
     "type": "INPUT",
@@ -67,16 +70,6 @@ exports.wio_node = [
     "attr": "light",
     "val": 0
   },
-/*
-  {
-    // LED light
-    "type": "OUTPUT",  
-    "pin": "GenericDOutD1",
-    "property": "onoff",
-    "attr": "ledonoff",
-    "val": "0"
-  },
-*/
   {
     // LED Bar
     "type": "OUTPUT",  
@@ -88,19 +81,22 @@ exports.wio_node = [
   {
     // Buzzer
     "type": "OUTPUT",  
-    "pin": "GroveSpeakerD2",
+    "pin": "GroveSpeakerD0",
     "property": "sound_ms",
     "attr": "soundfreq",
     "val": "0"
   }
 ];
 
+// wio-link
 // exports.wio_iot = {
 //   "location": "us",
-//   "token": "678daf8d876b57be49cceee69d69308a"
+//   "token": "e922a7f9cba75778c840aed07c9ff306"
 // };
 
+// wio-node
 exports.wio_iot = {
   "location": "us",
-  "token": "e922a7f9cba75778c840aed07c9ff306"
+  "token": "30802fbf0934dd3233913dfdf3bf970d"
 };
+

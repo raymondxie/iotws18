@@ -1,11 +1,3 @@
-// working on it
-//
-// 1. create async polling of sensor data from Wio-* boards
-// 2. Map sensor data/actuactor control signal to Device Model in IoTCS
-// 3. Sync data/control signal with IoTCS
-//
-
-
 /**
  * This NodeJS client acts as the main loop for Wio Node or Wio Link board with Grove sensors.
  * Using a sensor-config.js file to setup the type of sensors and corresponding PIN of 
@@ -13,17 +5,18 @@
  * and push to IoTCS.
  *
  * This client is a directly connected device using IoTCS csl virtual device API.
+ * To invoke:  node wio-iotcs-client.js <provision-file> <file-password>
  *
  * 12/26/2017  yuhua.xie@oracle.com
  */
 
 "use strict";
 
+// To disable TLS certificate check?
 // process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 // TODO: please supply the device model associated with your device
 // For example:  const DEVICE_MODEL_URN = 'urn:com:oracle:iot:wionode:mydevicemodel';
-// const DEVICE_MODEL_URN = '[TODO-REPLACE-WITH-YOUR-DEVICE-MODEL_URN]';
 const DEVICE_MODEL_URN = 'urn:com:oracle:iot:workshop:mdc';
 
 
@@ -31,34 +24,25 @@ const DEVICE_MODEL_URN = 'urn:com:oracle:iot:workshop:mdc';
 // IoTCS device library in NodeJS
 var dcl = require("./device-client-lib/device-library.node");
 dcl = dcl({debug: true});
-// dcl.oracle.iot.tam.store = (process.argv[2]);
-// dcl.oracle.iot.tam.storePassword = (process.argv[3]);
 var storeFile = (process.argv[2]);
 var storePassword = (process.argv[3]);
 
-
 // Wio Node board 
 const WioNode = require("./wio.js");
-const wioConfig = require("./sensor-config.js").wio_iot;
-
 // Load Wio Node / Wio Link Sensor Config
+const wioConfig = require("./sensor-config.js").wio_iot;
 const sensorConfig = require('./sensor-config.js').wio_node;
-console.log('sensorConfig = ', sensorConfig);
-
-// const log = require('npmlog');
 
 // Current Sensor Values - collected from "sensor-config.js" file and populated at run-time
 var currentData = {};
-currentData['name'] = "RXIE";  // TODO: replace with your own name, so we can see whose sensor data coming in.
+currentData['name'] = "mdc-iotws";  // TODO: replace with your own name, so we can see whose sensor data coming in.
 
 /*
 For example, after population of sensors:
 var currentData = {
     temperature: 68.5,
     humidity: 12.4,
-    light: 345,
-    soundfreq: 0,
-    lightlevel: 0
+    light: 345
 };
 */
 
@@ -101,11 +85,9 @@ var deviceCB = function(data, error) {
         console.log("error->", error);
 }
 
-/**
- * Create Wio Board and initialize it
- *
- * @returns {Promise} that completes when the board has been initialized
- */
+// 
+// Create Wio Board and initialize it
+// @returns {Promise} that completes when the board has been initialized
 function createWioBoard(virtualDev) {
     return new Promise((resolve, reject) => {
         // construct a Wio board
@@ -119,8 +101,11 @@ function createWioBoard(virtualDev) {
     });
 }
 
+//
+// setup sensors for the board based on sensor-config
 function setupSensors() {
-    // for handling control signal from IoTCS
+
+    // the sensors for handling control signal from IoTCS
     let writableSensors = {};
 
     //
@@ -156,7 +141,7 @@ function setupSensors() {
 
     // 
     // any writeable attribute change callback from IoTCS
-    //
+    // just prints out without doing anything further
     virtualDev.onChange = tupples => {
         tupples.forEach(tupple => {
             var show = {
@@ -185,7 +170,9 @@ function setupSensors() {
         }
     };
 
+    //
     // process sensor-config.js file, and start sensor reading and prepare for control commands
+    //
     sensorConfig.forEach(sensor => {
         switch (sensor.type) {
             case 'INPUT':
@@ -194,20 +181,18 @@ function setupSensors() {
                     currentData[sensor.attr] = sensor.val;
                 }
 
-                // virtualDev.update(currentData);
-
-                board.stream(sensor.pin, sensor.property, 1000, (data, error) => {
+                // we stream data every 2 second
+                board.stream(sensor.pin, sensor.property, 2000, (data, error) => {
                     if (error) {
                         console.log("can not read " + sensor.property);
                     }
-                    console.log("got data: ", data);
 
+                    // console.log("got data: ", data);
                     if (data && Math.abs(data[sensor.property] - currentData[sensor.attr]) > 1) {
                         currentData[sensor.attr] = data[sensor.property];
 
-                        console.log("feed sensor data to IoTCS: ", currentData);
-
                         // push to IoTCS
+                        console.log("feed sensor data to IoTCS: ", currentData);
                         virtualDev.update(currentData);
                     }
                 });
@@ -219,48 +204,7 @@ function setupSensors() {
                 break;
         }
     });
-
-    /*
-    //
-    // TODO: remove later 
-    // Temperally code for trouble-shooting this error message:
-    // [iotcs:error] SSL host name verification failed
-    //
-
-    // as we can tell by this, it is fine to update sensor data to IoTCS instance
-    var intervalId = setInterval(function(){    
-        console.log("sending data to IoTCS");
-        virtualDev.update(currentData);
-    }, 1000);
-
-    setTimeout(function(){
-        console.log("stop sending to IoTCS");
-        clearInterval(intervalId);
-    },3000);
-
-    // but
-    // after 20 seconds, we make one call to read Wio sensor data (which is a REST end call)
-    // That would trigger the break of IoTCS connection with error message:
-    // [iotcs:error] SSL host name verification failed
-    //
-    setTimeout(function(){
-        board.read(function(data, error) {
-            console.log("RXIE data: ", data, error);                   
-        }, 'GroveTempHumD1', 'temperature');       
-    }, 10000);    
-    // 
-    // TODO: remove later
-    // End of temporary code.
-    */
-
 }
-
-
-// function dataChange() {
-//     console.log('updateChange() - currentData = ', currentData);
-//     virtualDev.update(currentData);
-// }
-
 
 function getModelWioNodeDeviceModel(device){
     return new Promise((resolve, reject) => {
