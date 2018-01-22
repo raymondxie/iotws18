@@ -7,40 +7,12 @@
 
 var exports = module.exports = {};
 
-// The config file indicates how your GrovePi sensors are connected,
-//    pin   - indicates which socket the sensor is connected to
-//    type  - sensor type label, matching with switch() code in mainClient.js
-//    attr  - the attribute name in device model that this sensor data is corresponding to
-//    val   - the initial value for this attribute
-/*
-exports.grovepi = [
-  {
-    "pin": "A2",
-    "type": "RotaryAngleAnalogSensor",
-    "attr": "angle",
-    "val": 0
-  },
-  {
-    "pin": "A1",
-    "type": "LightAnalogSensor",
-    "attr": "light",
-    "val": 0
-  },
-  {
-    "pin": "D3",
-    "type": "Button",
-    "attr": "button",
-    "val": false
-  }
-];
-*/
-
 // For Wio Node and sensors
 // {
-//   "pin": "A2",               -- which connector 
-//   "type": "IN",              -- type: INPUT or OUTPUT
-//   "property": "humidity",    -- type of reading
-//   "attr": "humidity",        -- device model attribute
+//   "pin": "GroveLuminanceA0", -- which connector. Find it from Wio App - "View API" page 
+//   "type": "INPUT",           -- type: INPUT or OUTPUT
+//   "property": "humidity",    -- type of property / action, when calling to Wio virtualization server. See "View API" page
+//   "attr": "humidity",        -- device model attribute, as defined in IoTCS backend
 //   "val": 0                   -- default value for a model attribute
 // }
 exports.wio_node = [
