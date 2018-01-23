@@ -15,7 +15,7 @@ const property_attribute_mapping = {
     "luminance": "lux"
 };
 
-const streamDelay = 100;    // default stream interval: 100ms
+const streamDelay = 10000;  // default stream interval: 10000ms
 const location = 'us';      // default Wio server location
 var streams = {};
 

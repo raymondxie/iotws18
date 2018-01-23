@@ -32,11 +32,11 @@ board.read(callback, 'GroveTempHumD1', 'humidity');
 board.read(callback, 'GroveLuminanceA0', 'luminance');
 
 // continuous reading
-board.stream('GroveTempHumD1', 'temperature', 1000, callback);
+board.stream('GroveTempHumD1', 'temperature', 10000, callback);
 // stop continuous reading after 20 seconds
 setTimeout(function(){
     board.stopStream('GroveTempHumD1', 'temperature');
-}, 10000);
+}, 50000);
 
 
 

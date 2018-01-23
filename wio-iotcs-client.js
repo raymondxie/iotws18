@@ -182,7 +182,7 @@ function setupSensors() {
                 }
 
                 // we stream data every 2 second
-                board.stream(sensor.pin, sensor.property, 2000, (data, error) => {
+                board.stream(sensor.pin, sensor.property, 10000, (data, error) => {
                     if (error) {
                         console.log("can not read " + sensor.property);
                     }
