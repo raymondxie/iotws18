@@ -5,7 +5,7 @@
  * Date: 12/26/2017
  */
 
-const log = require('npmlog')
+// const log = require('npmlog')
 // const wioRest = require('./sensor-config.js').wio_iot;
 // const wioClient = require('./node-wio-link')(wioRest.location)
 
@@ -51,7 +51,7 @@ function WioNode(opts) {
 
 WioNode.prototype.debug = function(msg) {
     if (this.debugMode)
-        log.warn('WinNode: ', msg)
+        console.log('WinNode: ', msg);
 }
 
 /* 
@@ -62,14 +62,15 @@ WioNode.prototype.debug = function(msg) {
  */ 
 WioNode.prototype.write = function(callback, connector, action, ...details) {
     this.debug(Object.values(arguments));
+    var self = this;
 
     this.wioBoard.node.write(this.restToken, connector, action, ...details)
         .then(function(data) {
-            console.log(data)
+            self.debug(data);
             callback(data, null);
         })
         .catch(function(error) {
-            console.log(error)
+            self.debug( "error->" +  error);
             callback(null, error);
         });
 };
@@ -81,9 +82,10 @@ WioNode.prototype.write = function(callback, connector, action, ...details) {
  */
 WioNode.prototype.read = function(callback, connector, property) {
     // console.log("reading wio sensor: ", connector, property);
+    var self = this;
     this.wioBoard.node.read(this.restToken, connector, property)
         .then(function(data) {
-            console.log("sensor data: ", data);
+            self.debug( data);
 
             var attr = property_attribute_mapping[property];
             if( attr != undefined ) {
@@ -97,7 +99,7 @@ WioNode.prototype.read = function(callback, connector, property) {
             }
         })
         .catch(function(error) {
-            console.log("sensor error: ", error);
+            self.debug("sensor error: " + error);
             callback(null, error);
         });
 }
@@ -130,7 +132,7 @@ WioNode.prototype.stopStream = function(connector, property) {
     if( streams[connector+property] !== 'undefined' || streams[connector+property] !== null ) {
         clearInterval( streams[connector+property] );
         streams[connector+property] = null;
-        console.log("stopped stream");
+        this.debug("stopped stream");
     }
 }
 
@@ -140,12 +142,13 @@ WioNode.prototype.stopStream = function(connector, property) {
  * amount: number of second to sleep
  */
 WioNode.prototype.sleep = function(amount) {
+    var self = this;
     this.wioBoard.node.sleep(wioRest.token, amount)   
         .then(function(data) {
-            console.log(data)
+            self.debug(data);
         })
         .catch(function(error) {
-            console.log(error)
+            self.debug( "error->" + error);
         });
 }
 

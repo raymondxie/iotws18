@@ -5,17 +5,28 @@ var axios = require('axios');
 function WioLinkClient(serverLocation) {
   var clientLib = {};
 
-  if (!serverLocation)
+  // baseURL
+  var baseURL = "";
+  if (!serverLocation) {
     serverLocation = 'us';
-  else {
-    serverLocation = serverLocation.toLowerCase();
-    if (!['cn', 'us'].includes(serverLocation))
-      throw new Error(`Invalid server location: "${serverLocation}"`);
   }
+  serverLocation = serverLocation.toLowerCase();
+
+
+
+  if (serverLocation==='us' || serverLocation==='cn') {
+    baseURL = `https://${serverLocation}.wio.seeed.io/v1/`;
+  } 
+  else {
+    console.log(`Using a custom server location: "${serverLocation}"`);
+    // e.g.  http://192.168.1.123:8080
+    baseURL = `${serverLocation}/v1/`;
+  }
+
 
   var rest = {
     client: axios.create({
-      baseURL: `https://${serverLocation}.wio.seeed.io/v1/`,
+      baseURL: `${baseURL}`,
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Accept': 'application/json'

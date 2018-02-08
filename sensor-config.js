@@ -9,14 +9,22 @@ var exports = module.exports = {};
 
 // For Wio Node and sensors
 // {
-//   "pin": "GroveLuminanceA0", -- which connector. Find it from Wio App - "View API" page 
 //   "type": "INPUT",           -- type: INPUT or OUTPUT
+//   "pin": "GroveLuminanceA0", -- which connector. Find it from Wio App - "View API" page 
 //   "property": "humidity",    -- type of property / action, when calling to Wio virtualization server. See "View API" page
 //   "attr": "humidity",        -- device model attribute, as defined in IoTCS backend
 //   "val": 0                   -- default value for a model attribute
 // }
 exports.wio_node = [
-/*
+
+  {
+    // Light Sensor
+    "type": "INPUT",
+    "pin": "GroveLuminanceA0",
+    "property": "luminance",
+    "attr": "light",
+    "val": 0
+  },
   {
     // Humidity sensor
     "type": "INPUT",
@@ -31,15 +39,6 @@ exports.wio_node = [
     "pin": "GroveTempHumD1",
     "property": "temperature",
     "attr": "temperature",
-    "val": 0
-  },
-*/
-  {
-    // Light Sensor
-    "type": "INPUT",
-    "pin": "GroveLuminanceA0",
-    "property": "luminance",
-    "attr": "light",
     "val": 0
   },
   {
@@ -60,15 +59,21 @@ exports.wio_node = [
   }
 ];
 
+// customize Wio server
+exports.wio_iot = {
+  "location": "http://129.150.86.239:8080",
+  "token": "94ef3060fb964724e42c1f3d1c6cd116"
+};
+
 // wio-link
 // exports.wio_iot = {
 //   "location": "us",
-//   "token": "e922a7f9cba75778c840aed07c9ff306"
+//   "token": "6285cad2c451e2da8d3e0b054c9127aa"
 // };
 
 // wio-node
-exports.wio_iot = {
-  "location": "us",
-  "token": "30802fbf0934dd3233913dfdf3bf970d"
-};
+// exports.wio_iot = {
+//   "location": "us",
+//   "token": "30802fbf0934dd3233913dfdf3bf970d"
+// };
 

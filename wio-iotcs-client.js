@@ -17,8 +17,7 @@
 
 // TODO: please supply the device model associated with your device
 // For example:  const DEVICE_MODEL_URN = 'urn:com:oracle:iot:wionode:mydevicemodel';
-const DEVICE_MODEL_URN = 'urn:com:oracle:iot:workshop:mdc';
-
+const DEVICE_MODEL_URN = 'urn:com:oracle:code:iotws:wio';
 
 // Setup IoT Device Client Lib
 // IoTCS device library in NodeJS
@@ -35,13 +34,12 @@ const sensorConfig = require('./sensor-config.js').wio_node;
 
 // Current Sensor Values - collected from "sensor-config.js" file and populated at run-time
 var currentData = {};
-currentData['name'] = "mdc-iotws";  // TODO: replace with your own name, so we can see whose sensor data coming in.
 
 /*
-For example, after population of sensors:
+For example, after gathering of sensor data:
 var currentData = {
-    temperature: 68.5,
     humidity: 12.4,
+    temperature: 68.5,
     light: 345
 };
 */

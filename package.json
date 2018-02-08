@@ -16,7 +16,6 @@
   "license": "MIT",
   "dependencies": {
     "axios": "^0.17.1",
-    "node-forge": "^0.7.1",
-    "npmlog": "^4.1.2"
+    "node-forge": "^0.7.1"
   }
 }

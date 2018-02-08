@@ -25,7 +25,7 @@ var board = new WioNode({
 // possible calls to Wio board 
 //
 // write once
-board.write(callback, 'GroveSpeakerD2', 'sound_ms', '443', '1000');
+board.write(callback, 'GroveSpeakerD0', 'sound_ms', '443', '1000');
 // read once
 board.read(callback, 'GroveTempHumD1', 'humidity');
 // read once
