@@ -91,7 +91,7 @@ function createWioBoard(virtualDev) {
         // construct a Wio board
         board = new WioNode({
             "debug": true,
-            "token": wioConfig.token,
+            "token": wioConfig.access_token,
             "location": wioConfig.location
         });
 

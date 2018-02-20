@@ -16,7 +16,7 @@ var callback = function(data, error) {
 // construct a Wio board
 var board = new WioNode({
     "debug": true,
-    "token": wioConfig.token,
+    "token": wioConfig.access_token,
     "location": wioConfig.location
 });
 

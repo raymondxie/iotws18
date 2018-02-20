@@ -5,11 +5,8 @@
  * Date: 12/26/2017
  */
 
-// const log = require('npmlog')
-// const wioRest = require('./sensor-config.js').wio_iot;
-// const wioClient = require('./node-wio-link')(wioRest.location)
-
 // the returned data from virtualization server has different property name as requested
+// here is the mapping if needed.
 const property_attribute_mapping = {
     "temperature": "celsius_degree",
     "luminance": "lux"
@@ -36,7 +33,7 @@ function WioNode(opts) {
         this.restToken = opts.token
     }
     else {
-        throw new Error('You must specify the access-token to Wio REST server')
+        throw new Error('You must specify the access_token to Wio REST server')
     }
 
     if (typeof opts.location !== 'underfined')
@@ -143,7 +140,7 @@ WioNode.prototype.stopStream = function(connector, property) {
  */
 WioNode.prototype.sleep = function(amount) {
     var self = this;
-    this.wioBoard.node.sleep(wioRest.token, amount)   
+    this.wioBoard.node.sleep(this.restToken, amount)   
         .then(function(data) {
             self.debug(data);
         })

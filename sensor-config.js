@@ -62,18 +62,18 @@ exports.wio_node = [
 // customize Wio server
 exports.wio_iot = {
   "location": "http://129.150.86.239:8080",
-  "token": "94ef3060fb964724e42c1f3d1c6cd116"
+  "access_token": "94ef3060fb964724e42c1f3d1c6cd116"
 };
 
 // wio-link
 // exports.wio_iot = {
 //   "location": "us",
-//   "token": "6285cad2c451e2da8d3e0b054c9127aa"
+//   "access_token": "6285cad2c451e2da8d3e0b054c9127aa"
 // };
 
 // wio-node
 // exports.wio_iot = {
 //   "location": "us",
-//   "token": "30802fbf0934dd3233913dfdf3bf970d"
+//   "access_token": "30802fbf0934dd3233913dfdf3bf970d"
 // };
 
