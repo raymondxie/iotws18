@@ -64,11 +64,13 @@ WioNode.prototype.write = function(callback, connector, action, ...details) {
     this.wioBoard.node.write(this.restToken, connector, action, ...details)
         .then(function(data) {
             self.debug(data);
-            callback(data, null);
+            if( callback !== null )
+                callback(data, null);
         })
         .catch(function(error) {
             self.debug( "error->" +  error);
-            callback(null, error);
+            if( callback !== null )
+                callback(null, error);
         });
 };
 
